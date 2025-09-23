@@ -1,0 +1,1332 @@
+from omni.isaac.lab.utils import configclass
+
+from embodiment_scaling_laws.tasks.configs.algorithm.default_ppo_cfg import DefaultPPORunnerCfg
+
+
+@configclass
+class Gendog0PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog0_gendog_0_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Gendog100PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog100_gendog_100_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog101PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog101_gendog_101_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog102PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog102_gendog_102_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog103PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog103_gendog_103_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog104PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog104_gendog_104_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog105PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog105_gendog_105_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog106PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog106_gendog_106_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog107PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog107_gendog_107_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog108PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog108_gendog_108_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog109PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog109_gendog_109_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog10PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog10_gendog_10_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Gendog110PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog110_gendog_110_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog111PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog111_gendog_111_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog112PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog112_gendog_112_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog113PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog113_gendog_113_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog114PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog114_gendog_114_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog115PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog115_gendog_115_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog116PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog116_gendog_116_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Gendog117PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog117_gendog_117_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Gendog118PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog118_gendog_118_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Gendog119PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog119_gendog_119_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog11PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog11_gendog_11_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog120PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog120_gendog_120_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog121PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog121_gendog_121_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog122PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog122_gendog_122_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog123PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog123_gendog_123_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog124PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog124_gendog_124_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog125PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog125_gendog_125_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog126PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog126_gendog_126_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog127PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog127_gendog_127_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog128PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog128_gendog_128_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog129PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog129_gendog_129_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog12PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog12_gendog_12_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog130PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog130_gendog_130_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog131PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog131_gendog_131_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog132PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog132_gendog_132_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog133PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog133_gendog_133_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog134PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog134_gendog_134_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog135PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog135_gendog_135_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog136PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog136_gendog_136_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog137PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog137_gendog_137_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog138PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog138_gendog_138_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog139PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog139_gendog_139_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog13PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog13_gendog_13_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog140PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog140_gendog_140_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog141PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog141_gendog_141_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog142PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog142_gendog_142_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog143PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog143_gendog_143_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog144PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog144_gendog_144_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog145PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog145_gendog_145_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog146PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog146_gendog_146_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog147PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog147_gendog_147_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog148PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog148_gendog_148_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog149PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog149_gendog_149_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog14PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog14_gendog_14_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog150PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog150_gendog_150_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog151PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog151_gendog_151_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog152PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog152_gendog_152_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog153PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog153_gendog_153_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog154PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog154_gendog_154_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog155PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog155_gendog_155_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog156PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog156_gendog_156_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog157PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog157_gendog_157_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog158PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog158_gendog_158_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog159PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog159_gendog_159_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog15PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog15_gendog_15_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog160PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog160_gendog_160_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog161PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog161_gendog_161_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog162PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog162_gendog_162_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog163PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog163_gendog_163_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog164PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog164_gendog_164_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog165PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog165_gendog_165_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog166PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog166_gendog_166_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog167PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog167_gendog_167_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog168PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog168_gendog_168_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog169PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog169_gendog_169_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog16PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog16_gendog_16_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog170PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog170_gendog_170_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog171PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog171_gendog_171_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog172PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog172_gendog_172_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog173PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog173_gendog_173_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog174PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog174_gendog_174_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog175PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog175_gendog_175_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog176PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog176_gendog_176_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog177PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog177_gendog_177_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog178PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog178_gendog_178_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog179PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog179_gendog_179_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog17PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog17_gendog_17_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog180PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog180_gendog_180_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog181PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog181_gendog_181_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog182PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog182_gendog_182_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog183PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog183_gendog_183_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog184PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog184_gendog_184_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog185PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog185_gendog_185_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog186PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog186_gendog_186_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog187PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog187_gendog_187_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog188PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog188_gendog_188_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog189PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog189_gendog_189_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog18PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog18_gendog_18_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog190PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog190_gendog_190_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog191PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog191_gendog_191_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog192PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog192_gendog_192_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog193PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog193_gendog_193_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog194PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog194_gendog_194_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog195PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog195_gendog_195_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog196PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog196_gendog_196_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog197PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog197_gendog_197_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog198PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog198_gendog_198_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog199PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog199_gendog_199_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog19PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog19_gendog_19_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog1PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog1_gendog_1_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Gendog200PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog200_gendog_200_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog201PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog201_gendog_201_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog202PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog202_gendog_202_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog203PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog203_gendog_203_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog204PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog204_gendog_204_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog205PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog205_gendog_205_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog206PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog206_gendog_206_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog207PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog207_gendog_207_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog208PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog208_gendog_208_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog209PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog209_gendog_209_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog20PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog20_gendog_20_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog210PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog210_gendog_210_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog211PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog211_gendog_211_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog212PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog212_gendog_212_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog213PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog213_gendog_213_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog214PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog214_gendog_214_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog215PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog215_gendog_215_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog216PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog216_gendog_216_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog217PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog217_gendog_217_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog218PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog218_gendog_218_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog219PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog219_gendog_219_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog21PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog21_gendog_21_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog220PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog220_gendog_220_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog221PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog221_gendog_221_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog222PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog222_gendog_222_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog223PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog223_gendog_223_KneeNum_fl2_fr2_rl2_rr2__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog224PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog224_gendog_224_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Gendog225PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog225_gendog_225_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Gendog226PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog226_gendog_226_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Gendog227PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog227_gendog_227_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog228PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog228_gendog_228_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog229PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog229_gendog_229_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog22PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog22_gendog_22_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog230PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog230_gendog_230_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog231PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog231_gendog_231_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog232PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog232_gendog_232_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog233PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog233_gendog_233_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog234PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog234_gendog_234_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog235PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog235_gendog_235_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog236PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog236_gendog_236_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog237PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog237_gendog_237_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog238PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog238_gendog_238_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog239PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog239_gendog_239_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog23PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog23_gendog_23_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog240PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog240_gendog_240_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog241PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog241_gendog_241_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog242PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog242_gendog_242_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog243PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog243_gendog_243_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog244PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog244_gendog_244_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog245PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog245_gendog_245_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog246PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog246_gendog_246_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog247PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog247_gendog_247_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog248PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog248_gendog_248_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog249PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog249_gendog_249_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog24PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog24_gendog_24_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog250PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog250_gendog_250_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog251PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog251_gendog_251_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog252PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog252_gendog_252_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog253PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog253_gendog_253_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog254PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog254_gendog_254_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog255PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog255_gendog_255_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog256PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog256_gendog_256_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog257PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog257_gendog_257_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog258PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog258_gendog_258_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog259PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog259_gendog_259_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog25PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog25_gendog_25_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog260PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog260_gendog_260_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog261PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog261_gendog_261_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog262PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog262_gendog_262_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog263PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog263_gendog_263_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog264PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog264_gendog_264_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog265PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog265_gendog_265_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog266PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog266_gendog_266_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog267PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog267_gendog_267_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog268PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog268_gendog_268_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog269PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog269_gendog_269_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog26PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog26_gendog_26_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog270PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog270_gendog_270_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog271PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog271_gendog_271_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog272PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog272_gendog_272_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog273PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog273_gendog_273_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog274PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog274_gendog_274_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog275PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog275_gendog_275_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog276PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog276_gendog_276_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog277PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog277_gendog_277_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog278PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog278_gendog_278_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog279PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog279_gendog_279_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog27PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog27_gendog_27_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog280PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog280_gendog_280_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog281PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog281_gendog_281_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog282PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog282_gendog_282_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog283PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog283_gendog_283_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog284PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog284_gendog_284_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog285PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog285_gendog_285_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog286PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog286_gendog_286_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog287PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog287_gendog_287_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog288PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog288_gendog_288_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog289PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog289_gendog_289_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog28PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog28_gendog_28_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog290PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog290_gendog_290_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog291PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog291_gendog_291_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog292PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog292_gendog_292_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog293PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog293_gendog_293_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog294PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog294_gendog_294_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog295PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog295_gendog_295_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog296PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog296_gendog_296_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog297PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog297_gendog_297_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog298PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog298_gendog_298_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog299PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog299_gendog_299_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog29PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog29_gendog_29_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog2PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog2_gendog_2_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Gendog300PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog300_gendog_300_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog301PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog301_gendog_301_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog302PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog302_gendog_302_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog303PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog303_gendog_303_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog304PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog304_gendog_304_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog305PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog305_gendog_305_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog306PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog306_gendog_306_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog307PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog307_gendog_307_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog308PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog308_gendog_308_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog309PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog309_gendog_309_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog30PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog30_gendog_30_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog310PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog310_gendog_310_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog311PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog311_gendog_311_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog312PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog312_gendog_312_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog313PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog313_gendog_313_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog314PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog314_gendog_314_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog315PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog315_gendog_315_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog316PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog316_gendog_316_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog317PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog317_gendog_317_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog318PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog318_gendog_318_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog319PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog319_gendog_319_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog31PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog31_gendog_31_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog320PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog320_gendog_320_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog321PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog321_gendog_321_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog322PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog322_gendog_322_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog323PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog323_gendog_323_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog324PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog324_gendog_324_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog325PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog325_gendog_325_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog326PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog326_gendog_326_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog327PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog327_gendog_327_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog328PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog328_gendog_328_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog329PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog329_gendog_329_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog32PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog32_gendog_32_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog330PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog330_gendog_330_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog331PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog331_gendog_331_KneeNum_fl3_fr3_rl3_rr3__ScaleJointLimit_fl0_fr0_rl0_rr1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog33PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog33_gendog_33_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog34PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog34_gendog_34_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog35PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog35_gendog_35_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog36PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog36_gendog_36_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog37PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog37_gendog_37_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog38PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog38_gendog_38_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog39PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog39_gendog_39_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog3PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog3_gendog_3_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog40PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog40_gendog_40_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog41PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog41_gendog_41_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog42PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog42_gendog_42_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog43PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog43_gendog_43_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl1_fr0_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog44PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog44_gendog_44_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog45PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog45_gendog_45_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog46PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog46_gendog_46_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog47PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog47_gendog_47_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog48PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog48_gendog_48_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog49PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog49_gendog_49_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog4PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog4_gendog_4_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog50PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog50_gendog_50_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog51PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog51_gendog_51_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog52PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog52_gendog_52_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog53PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog53_gendog_53_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog54PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog54_gendog_54_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog55PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog55_gendog_55_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog56PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog56_gendog_56_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog57PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog57_gendog_57_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog58PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog58_gendog_58_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog59PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog59_gendog_59_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog5PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog5_gendog_5_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog60PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog60_gendog_60_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog61PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog61_gendog_61_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog62PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog62_gendog_62_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog63PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog63_gendog_63_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog64PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog64_gendog_64_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog65PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog65_gendog_65_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog66PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog66_gendog_66_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog67PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog67_gendog_67_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr1_rl0_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog68PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog68_gendog_68_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog69PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog69_gendog_69_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog6PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog6_gendog_6_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog70PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog70_gendog_70_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog71PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog71_gendog_71_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog72PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog72_gendog_72_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog73PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog73_gendog_73_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog74PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog74_gendog_74_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog75PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog75_gendog_75_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog76PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog76_gendog_76_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog77PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog77_gendog_77_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog78PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog78_gendog_78_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog79PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog79_gendog_79_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog7PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog7_gendog_7_KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog80PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog80_gendog_80_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Gendog81PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog81_gendog_81_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Gendog82PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog82_gendog_82_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Gendog83PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog83_gendog_83_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog84PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog84_gendog_84_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog85PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog85_gendog_85_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog86PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog86_gendog_86_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog87PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog87_gendog_87_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog88PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog88_gendog_88_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Gendog89PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog89_gendog_89_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Gendog8PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog8_gendog_8_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Gendog90PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog90_gendog_90_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Gendog91PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog91_gendog_91_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl1_rr0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Gendog92PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog92_gendog_92_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Gendog93PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog93_gendog_93_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Gendog94PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog94_gendog_94_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Gendog95PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog95_gendog_95_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Gendog96PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog96_gendog_96_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Gendog97PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog97_gendog_97_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Gendog98PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog98_gendog_98_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Gendog99PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog99_gendog_99_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Gendog9PPORunnerCfg(DefaultPPORunnerCfg):
+    experiment_name = "Gendog9_gendog_9_KneeNum_fl1_fr1_rl1_rr1__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_scale_all_1_2"

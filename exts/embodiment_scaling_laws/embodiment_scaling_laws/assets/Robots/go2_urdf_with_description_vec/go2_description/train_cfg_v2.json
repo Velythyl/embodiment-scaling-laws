@@ -1,0 +1,45 @@
+{
+    "robot_name": "go2",
+    "drop_height": 0.3345434268263753,
+    "action_space": 12,
+    "nominal_joint_positions": {
+        ".*L_hip_joint": 0.1,
+        ".*R_hip_joint": -0.1,
+        "F[L,R]_thigh_joint": 0.8,
+        "R[L,R]_thigh_joint": 1.0,
+        ".*_calf_joint": -1.5
+    },
+    "reward_cfgs": {
+        "feet_ground_contact_cfg": ".*foot",
+        "feet_ground_asset_cfg": ".*foot",
+        "undesired_contact_cfg": [
+            ".*calf.*",
+            ".*thigh.*",
+            ".*base.*"
+        ],
+        "joint_hip_cfg": [
+            ".*hip.*joint"
+        ],
+        "joint_knee_cfg": [],
+        "illegal_contact_cfg": [
+            ".*base.*",
+            ".*hip.*",
+            ".*thigh.*",
+            ".*calf.*"
+        ]
+    },
+    "actuators": {
+        "base_legs": {
+            "motor_type": "DCMotor",
+            "joint_names_expr": [
+                ".*joint"
+            ],
+            "effort_limit": 23.5,
+            "saturation_effort": 23.5,
+            "velocity_limit": 30.0,
+            "stiffness": 25.0,
+            "damping": 0.5,
+            "friction": 0.0
+        }
+    }
+}

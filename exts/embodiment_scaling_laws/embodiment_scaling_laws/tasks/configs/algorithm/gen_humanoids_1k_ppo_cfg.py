@@ -1,0 +1,1401 @@
+from omni.isaac.lab.utils import configclass
+
+from embodiment_scaling_laws.tasks.configs.algorithm.default_ppo_cfg import DefaultPPORunnerCfg
+
+
+@configclass
+class ParentGenhumanoidPPORunnerCfg(DefaultPPORunnerCfg):
+    max_iterations = 42500
+
+
+@configclass
+class Genhumanoid0PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid0_genhumanoid_0_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid100PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid100_genhumanoid_100_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid101PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid101_genhumanoid_101_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid102PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid102_genhumanoid_102_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid103PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid103_genhumanoid_103_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid104PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid104_genhumanoid_104_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid105PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid105_genhumanoid_105_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid106PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid106_genhumanoid_106_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid107PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid107_genhumanoid_107_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid108PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid108_genhumanoid_108_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid109PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid109_genhumanoid_109_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid10PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid10_genhumanoid_10_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid110PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid110_genhumanoid_110_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid111PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid111_genhumanoid_111_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid112PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid112_genhumanoid_112_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid113PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid113_genhumanoid_113_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid114PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid114_genhumanoid_114_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid115PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid115_genhumanoid_115_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid116PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid116_genhumanoid_116_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid117PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid117_genhumanoid_117_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid118PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid118_genhumanoid_118_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid119PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid119_genhumanoid_119_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid11PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid11_genhumanoid_11_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid120PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid120_genhumanoid_120_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid121PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid121_genhumanoid_121_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid122PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid122_genhumanoid_122_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid123PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid123_genhumanoid_123_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid124PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid124_genhumanoid_124_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid125PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid125_genhumanoid_125_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid126PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid126_genhumanoid_126_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid127PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid127_genhumanoid_127_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid128PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid128_genhumanoid_128_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid129PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid129_genhumanoid_129_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid12PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid12_genhumanoid_12_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid130PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid130_genhumanoid_130_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid131PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid131_genhumanoid_131_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid132PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid132_genhumanoid_132_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid133PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid133_genhumanoid_133_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid134PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid134_genhumanoid_134_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid135PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid135_genhumanoid_135_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid136PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid136_genhumanoid_136_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid137PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid137_genhumanoid_137_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid138PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid138_genhumanoid_138_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid139PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid139_genhumanoid_139_KneeNum_l2_r2__ScaleJointLimit_l0_r0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid13PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid13_genhumanoid_13_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid140PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid140_genhumanoid_140_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid141PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid141_genhumanoid_141_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid142PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid142_genhumanoid_142_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid143PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid143_genhumanoid_143_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid144PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid144_genhumanoid_144_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid145PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid145_genhumanoid_145_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid146PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid146_genhumanoid_146_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid147PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid147_genhumanoid_147_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid148PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid148_genhumanoid_148_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid149PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid149_genhumanoid_149_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid14PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid14_genhumanoid_14_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid150PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid150_genhumanoid_150_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid151PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid151_genhumanoid_151_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid152PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid152_genhumanoid_152_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid153PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid153_genhumanoid_153_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid154PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid154_genhumanoid_154_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid155PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid155_genhumanoid_155_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid156PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid156_genhumanoid_156_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid157PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid157_genhumanoid_157_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid158PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid158_genhumanoid_158_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid159PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid159_genhumanoid_159_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid15PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid15_genhumanoid_15_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid160PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid160_genhumanoid_160_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid161PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid161_genhumanoid_161_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid162PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid162_genhumanoid_162_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid163PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid163_genhumanoid_163_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid164PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid164_genhumanoid_164_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid165PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid165_genhumanoid_165_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid166PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid166_genhumanoid_166_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid167PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid167_genhumanoid_167_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid168PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid168_genhumanoid_168_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid169PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid169_genhumanoid_169_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid16PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid16_genhumanoid_16_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid170PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid170_genhumanoid_170_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid171PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid171_genhumanoid_171_KneeNum_l2_r2__ScaleJointLimit_l1_r0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid172PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid172_genhumanoid_172_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid173PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid173_genhumanoid_173_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid174PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid174_genhumanoid_174_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid175PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid175_genhumanoid_175_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid176PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid176_genhumanoid_176_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid177PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid177_genhumanoid_177_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid178PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid178_genhumanoid_178_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid179PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid179_genhumanoid_179_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid17PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid17_genhumanoid_17_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid180PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid180_genhumanoid_180_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid181PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid181_genhumanoid_181_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid182PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid182_genhumanoid_182_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid183PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid183_genhumanoid_183_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid184PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid184_genhumanoid_184_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid185PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid185_genhumanoid_185_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid186PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid186_genhumanoid_186_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid187PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid187_genhumanoid_187_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid188PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid188_genhumanoid_188_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid189PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid189_genhumanoid_189_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid18PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid18_genhumanoid_18_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid190PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid190_genhumanoid_190_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid191PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid191_genhumanoid_191_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid192PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid192_genhumanoid_192_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid193PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid193_genhumanoid_193_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid194PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid194_genhumanoid_194_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid195PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid195_genhumanoid_195_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid196PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid196_genhumanoid_196_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid197PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid197_genhumanoid_197_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid198PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid198_genhumanoid_198_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid199PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid199_genhumanoid_199_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid19PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid19_genhumanoid_19_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid1PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid1_genhumanoid_1_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid200PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid200_genhumanoid_200_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid201PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid201_genhumanoid_201_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid202PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid202_genhumanoid_202_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid203PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid203_genhumanoid_203_KneeNum_l2_r2__ScaleJointLimit_l1_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid204PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid204_genhumanoid_204_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid205PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid205_genhumanoid_205_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid206PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid206_genhumanoid_206_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid207PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid207_genhumanoid_207_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid208PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid208_genhumanoid_208_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid209PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid209_genhumanoid_209_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid20PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid20_genhumanoid_20_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid210PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid210_genhumanoid_210_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid211PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid211_genhumanoid_211_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid212PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid212_genhumanoid_212_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid213PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid213_genhumanoid_213_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid214PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid214_genhumanoid_214_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid215PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid215_genhumanoid_215_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid216PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid216_genhumanoid_216_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid217PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid217_genhumanoid_217_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid218PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid218_genhumanoid_218_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid219PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid219_genhumanoid_219_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid21PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid21_genhumanoid_21_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid220PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid220_genhumanoid_220_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid221PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid221_genhumanoid_221_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid222PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid222_genhumanoid_222_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid223PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid223_genhumanoid_223_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid224PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid224_genhumanoid_224_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid225PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid225_genhumanoid_225_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid226PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid226_genhumanoid_226_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid227PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid227_genhumanoid_227_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid228PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid228_genhumanoid_228_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid229PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid229_genhumanoid_229_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid22PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid22_genhumanoid_22_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid230PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid230_genhumanoid_230_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid231PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid231_genhumanoid_231_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid232PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid232_genhumanoid_232_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid233PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid233_genhumanoid_233_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid234PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid234_genhumanoid_234_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid235PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid235_genhumanoid_235_KneeNum_l2_r2__ScaleJointLimit_l0_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid236PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid236_genhumanoid_236_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid237PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid237_genhumanoid_237_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid238PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid238_genhumanoid_238_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid239PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid239_genhumanoid_239_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid23PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid23_genhumanoid_23_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid240PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid240_genhumanoid_240_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid241PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid241_genhumanoid_241_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid242PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid242_genhumanoid_242_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid243PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid243_genhumanoid_243_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid244PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid244_genhumanoid_244_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid245PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid245_genhumanoid_245_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid246PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid246_genhumanoid_246_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid247PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid247_genhumanoid_247_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid248PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid248_genhumanoid_248_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid249PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid249_genhumanoid_249_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid24PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid24_genhumanoid_24_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid250PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid250_genhumanoid_250_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid251PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid251_genhumanoid_251_KneeNum_l3_r3__ScaleJointLimit_l0_r0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid252PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid252_genhumanoid_252_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid253PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid253_genhumanoid_253_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid254PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid254_genhumanoid_254_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid255PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid255_genhumanoid_255_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid256PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid256_genhumanoid_256_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid257PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid257_genhumanoid_257_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid258PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid258_genhumanoid_258_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid259PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid259_genhumanoid_259_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid25PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid25_genhumanoid_25_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid260PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid260_genhumanoid_260_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid261PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid261_genhumanoid_261_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid262PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid262_genhumanoid_262_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid263PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid263_genhumanoid_263_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid264PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid264_genhumanoid_264_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid265PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid265_genhumanoid_265_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid266PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid266_genhumanoid_266_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid267PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid267_genhumanoid_267_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid268PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid268_genhumanoid_268_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid269PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid269_genhumanoid_269_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid26PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid26_genhumanoid_26_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid270PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid270_genhumanoid_270_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid271PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid271_genhumanoid_271_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid272PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid272_genhumanoid_272_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid273PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid273_genhumanoid_273_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid274PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid274_genhumanoid_274_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid275PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid275_genhumanoid_275_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid276PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid276_genhumanoid_276_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid277PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid277_genhumanoid_277_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid278PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid278_genhumanoid_278_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid279PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid279_genhumanoid_279_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid27PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid27_genhumanoid_27_KneeNum_l1_r1__ScaleJointLimit_l0_r0_1_0__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid280PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid280_genhumanoid_280_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid281PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid281_genhumanoid_281_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid282PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid282_genhumanoid_282_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid283PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid283_genhumanoid_283_KneeNum_l3_r3__ScaleJointLimit_l1_r0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid284PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid284_genhumanoid_284_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid285PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid285_genhumanoid_285_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid286PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid286_genhumanoid_286_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid287PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid287_genhumanoid_287_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid288PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid288_genhumanoid_288_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid289PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid289_genhumanoid_289_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid28PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid28_genhumanoid_28_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid290PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid290_genhumanoid_290_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid291PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid291_genhumanoid_291_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid292PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid292_genhumanoid_292_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid293PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid293_genhumanoid_293_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid294PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid294_genhumanoid_294_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid295PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid295_genhumanoid_295_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid296PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid296_genhumanoid_296_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid297PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid297_genhumanoid_297_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid298PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid298_genhumanoid_298_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid299PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid299_genhumanoid_299_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid29PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid29_genhumanoid_29_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid2PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid2_genhumanoid_2_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid300PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid300_genhumanoid_300_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid301PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid301_genhumanoid_301_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid302PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid302_genhumanoid_302_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid303PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid303_genhumanoid_303_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid304PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid304_genhumanoid_304_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid305PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid305_genhumanoid_305_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid306PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid306_genhumanoid_306_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid307PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid307_genhumanoid_307_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid308PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid308_genhumanoid_308_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid309PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid309_genhumanoid_309_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid30PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid30_genhumanoid_30_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid310PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid310_genhumanoid_310_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid311PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid311_genhumanoid_311_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid312PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid312_genhumanoid_312_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid313PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid313_genhumanoid_313_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid314PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid314_genhumanoid_314_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid315PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid315_genhumanoid_315_KneeNum_l3_r3__ScaleJointLimit_l1_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid316PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid316_genhumanoid_316_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid317PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid317_genhumanoid_317_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid318PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid318_genhumanoid_318_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid319PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid319_genhumanoid_319_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid31PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid31_genhumanoid_31_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid320PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid320_genhumanoid_320_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid321PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid321_genhumanoid_321_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid322PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid322_genhumanoid_322_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid323PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid323_genhumanoid_323_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid324PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid324_genhumanoid_324_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid325PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid325_genhumanoid_325_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid326PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid326_genhumanoid_326_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid327PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid327_genhumanoid_327_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid328PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid328_genhumanoid_328_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid329PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid329_genhumanoid_329_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid32PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid32_genhumanoid_32_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid330PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid330_genhumanoid_330_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid331PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid331_genhumanoid_331_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid332PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid332_genhumanoid_332_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid333PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid333_genhumanoid_333_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid334PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid334_genhumanoid_334_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid335PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid335_genhumanoid_335_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid336PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid336_genhumanoid_336_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid337PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid337_genhumanoid_337_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid338PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid338_genhumanoid_338_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid339PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid339_genhumanoid_339_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid33PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid33_genhumanoid_33_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid340PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid340_genhumanoid_340_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid341PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid341_genhumanoid_341_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid342PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid342_genhumanoid_342_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid343PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid343_genhumanoid_343_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid344PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid344_genhumanoid_344_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid345PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid345_genhumanoid_345_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid346PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid346_genhumanoid_346_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid347PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid347_genhumanoid_347_KneeNum_l3_r3__ScaleJointLimit_l0_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid34PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid34_genhumanoid_34_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid35PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid35_genhumanoid_35_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid36PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid36_genhumanoid_36_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid37PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid37_genhumanoid_37_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid38PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid38_genhumanoid_38_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid39PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid39_genhumanoid_39_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid3PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid3_genhumanoid_3_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid40PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid40_genhumanoid_40_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid41PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid41_genhumanoid_41_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid42PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid42_genhumanoid_42_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid43PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid43_genhumanoid_43_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid44PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid44_genhumanoid_44_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid45PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid45_genhumanoid_45_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid46PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid46_genhumanoid_46_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid47PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid47_genhumanoid_47_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid48PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid48_genhumanoid_48_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid49PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid49_genhumanoid_49_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid4PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid4_genhumanoid_4_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid50PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid50_genhumanoid_50_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid51PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid51_genhumanoid_51_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid52PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid52_genhumanoid_52_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid53PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid53_genhumanoid_53_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid54PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid54_genhumanoid_54_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid55PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid55_genhumanoid_55_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid56PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid56_genhumanoid_56_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid57PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid57_genhumanoid_57_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid58PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid58_genhumanoid_58_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid59PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid59_genhumanoid_59_KneeNum_l1_r1__ScaleJointLimit_l1_r0_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid5PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid5_genhumanoid_5_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid60PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid60_genhumanoid_60_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid61PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid61_genhumanoid_61_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid62PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid62_genhumanoid_62_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid63PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid63_genhumanoid_63_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid64PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid64_genhumanoid_64_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid65PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid65_genhumanoid_65_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid66PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid66_genhumanoid_66_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid67PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid67_genhumanoid_67_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid68PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid68_genhumanoid_68_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid69PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid69_genhumanoid_69_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid6PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid6_genhumanoid_6_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid70PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid70_genhumanoid_70_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid71PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid71_genhumanoid_71_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid72PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid72_genhumanoid_72_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid73PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid73_genhumanoid_73_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid74PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid74_genhumanoid_74_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid75PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid75_genhumanoid_75_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_6__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid76PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid76_genhumanoid_76_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid77PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid77_genhumanoid_77_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid78PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid78_genhumanoid_78_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid79PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid79_genhumanoid_79_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid7PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid7_genhumanoid_7_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid80PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid80_genhumanoid_80_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid81PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid81_genhumanoid_81_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid82PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid82_genhumanoid_82_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid83PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid83_genhumanoid_83_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid84PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid84_genhumanoid_84_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_1_2"
+
+@configclass
+class Genhumanoid85PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid85_genhumanoid_85_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_8"
+
+@configclass
+class Genhumanoid86PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid86_genhumanoid_86_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_lengthen_calf_0_4"
+
+@configclass
+class Genhumanoid87PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid87_genhumanoid_87_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_6"
+
+@configclass
+class Genhumanoid88PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid88_genhumanoid_88_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid89PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid89_genhumanoid_89_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_8"
+
+@configclass
+class Genhumanoid8PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid8_genhumanoid_8_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_1_2"
+
+@configclass
+class Genhumanoid90PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid90_genhumanoid_90_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_torso_0_4"
+
+@configclass
+class Genhumanoid91PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid91_genhumanoid_91_KneeNum_l1_r1__ScaleJointLimit_l1_r1_0_2__Geo_scale_foot_size_2_0"
+
+@configclass
+class Genhumanoid92PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid92_genhumanoid_92_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_0"
+
+@configclass
+class Genhumanoid93PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid93_genhumanoid_93_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_1_2"
+
+@configclass
+class Genhumanoid94PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid94_genhumanoid_94_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_scale_all_0_8"
+
+@configclass
+class Genhumanoid95PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid95_genhumanoid_95_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_6"
+
+@configclass
+class Genhumanoid96PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid96_genhumanoid_96_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_1_2"
+
+@configclass
+class Genhumanoid97PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid97_genhumanoid_97_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_8"
+
+@configclass
+class Genhumanoid98PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid98_genhumanoid_98_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_thigh_0_4"
+
+@configclass
+class Genhumanoid99PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid99_genhumanoid_99_KneeNum_l1_r1__ScaleJointLimit_l0_r1_0_6__Geo_lengthen_calf_1_6"
+
+@configclass
+class Genhumanoid9PPORunnerCfg(ParentGenhumanoidPPORunnerCfg):
+    experiment_name = "Genhumanoid9_genhumanoid_9_KneeNum_l0_r0__ScaleJointLimit_l0_r0_1_0__Geo_scale_torso_0_8"

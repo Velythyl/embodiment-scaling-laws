@@ -1,0 +1,17 @@
+{
+    "robot_name": "h1",
+    "drop_height": 1.1010490655899048,
+    "action_space": 19,
+    "nominal_joint_positions": {
+        ".*_hip_yaw_joint": 0.0,
+        ".*_hip_roll_joint": 0.0,
+        ".*_hip_pitch_joint": -0.4,
+        ".*_knee_joint": 0.8,
+        ".*_ankle_joint": -0.4,
+        "torso_joint": 0.0,
+        ".*_shoulder_pitch_joint": 0.0,
+        ".*_shoulder_roll_joint": 0.0,
+        ".*_shoulder_yaw_joint": 0.0,
+        ".*_elbow_joint": 0.0
+    }
+}

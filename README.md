@@ -1,3 +1,6 @@
+# NOTE 
+
+https://isaac-sim.github.io/IsaacLab/v1.4.1/source/setup/installation/pip_installation.html#installing-isaac-sim
 
 # Towards Embodiment Scaling Laws in Robot Locomotion
 

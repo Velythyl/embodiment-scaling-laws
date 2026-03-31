@@ -9,7 +9,7 @@ import json
 class Policy(nn.Module):
     def __init__(self, initial_softmax_temperature,
                  softmax_temperature_min, stability_epsilon, policy_mean_abs_clip, policy_std_min_clip,
-                 policy_std_max_clip, args_cli=None):
+                 policy_std_max_clip, args_cli=None, dynamic_joint_des_dim=18):
         super(Policy, self).__init__()
         self.softmax_temperature_min = softmax_temperature_min
         self.stability_epsilon = stability_epsilon
@@ -19,7 +19,7 @@ class Policy(nn.Module):
         self.args_cli = args_cli
 
         # Constants
-        dynamic_joint_des_dim = 18
+        # dynamic_joint_des_dim is now a parameter (18 baseline, 18+N for custom shape descriptors)
         general_state_dim = 16 + 4
         dynamic_joint_state_dim = 3
 
@@ -181,7 +181,16 @@ class Policy(nn.Module):
         return policy_mean.squeeze(-1)
 
 
-def get_policy(model_device: str, args_cli=None):
+def get_policy(model_device: str, args_cli=None, dynamic_joint_des_dim=18):
+    """
+    Create and return a policy model.
+    
+    Args:
+        model_device: Device to place the model on
+        args_cli: Command line arguments
+        dynamic_joint_des_dim: Dimension of joint description vector 
+                               (18 for baseline, 24 for bbox mode)
+    """
     initial_softmax_temperature = 1.0
     softmax_temperature_min = 0.015
     stability_epsilon = 0.00000001
@@ -189,19 +198,27 @@ def get_policy(model_device: str, args_cli=None):
     policy_std_min_clip = 0.00000001
     policy_std_max_clip = 2.0
 
-    policy = Policy(initial_softmax_temperature, softmax_temperature_min, stability_epsilon, policy_mean_abs_clip, policy_std_min_clip, policy_std_max_clip, args_cli)
+    policy = Policy(initial_softmax_temperature, softmax_temperature_min, stability_epsilon, 
+                    policy_mean_abs_clip, policy_std_min_clip, policy_std_max_clip, args_cli,
+                    dynamic_joint_des_dim=dynamic_joint_des_dim)
     policy.to(model_device)
 
     return policy
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dynamic_joint_des_dim", type=int, default=18,
+                        help="Dimension of joint description vector (18 baseline, 24 for bbox, etc.)")
+    args = parser.parse_args()
+    
     # define the device = 'cuda:0'
     model_device = 'cuda:0'
 
-    policy = get_policy(model_device)
+    policy = get_policy(model_device, dynamic_joint_des_dim=args.dynamic_joint_des_dim)
 
-    dummy_dynamic_joint_description = torch.zeros((1, 13, 18), device=model_device, dtype=torch.float32)
+    dummy_dynamic_joint_description = torch.zeros((1, 13, args.dynamic_joint_des_dim), device=model_device, dtype=torch.float32)
     dummy_dynamic_joint_state = torch.zeros((1, 13, 3), device=model_device, dtype=torch.float32)
     dummy_dynamic_foot_description = torch.zeros((1, 4, 10), device=model_device, dtype=torch.float32)
     dummy_dynamic_foot_state = torch.zeros((1, 4, 2), device=model_device, dtype=torch.float32)

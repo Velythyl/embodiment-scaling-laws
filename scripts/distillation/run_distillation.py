@@ -4,8 +4,12 @@ from torch.cuda.amp import GradScaler, autocast
 import random
 import gc
 import sys, os
+import shlex
 
 from torch.utils.tensorboard import SummaryWriter
+import wandb
+import hydra
+from omegaconf import DictConfig
 import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utility_functions import (get_most_recent_h5py_record_path, save_checkpoint, AverageMeter,
@@ -50,7 +54,7 @@ def parse_arguments():
     parser.add_argument("--h5_repeat_factor", type=int, default=1, help="Number of times we repeat sampling data from"
                                                                         "cache consecutively in one epoch.")
     parser.add_argument("--use_amp", type=int, default=0, help="Whether to use automatic mixed precision.")
-    parser.add_argument("--max_parallel_envs_per_file", type=int, default=4096,
+    parser.add_argument("--max_parallel_envs_per_file", type=int, default=2048,
                         help="Number of parallel envs per file.")
     parser.add_argument("--max_envs_per_file_in_memory", type=int, default=512,
                        help="Number of envs per file that can be stored in cache.")
@@ -67,6 +71,25 @@ def parse_arguments():
                         default="logs/rsl_rl",
                         help="Directory containing the dataset.")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint for resume training.")
+    
+    # Robot description arguments (for description vector ablation experiments)
+    parser.add_argument("--description_filename", type=str, default=None,
+                        help="Name of robot description JSON to load from each robot's asset folder. "
+                             "If not specified, uses baseline 18-dim joint description (no limb bboxes). "
+                             "Examples: 'robot_description_vec_with_bboxes.json' for computed bboxes, "
+                             "'robot_description_vec_custom.json' for custom vectors.")
+    parser.add_argument("--asset_base_path", type=str,
+                        default="exts/embodiment_scaling_laws/embodiment_scaling_laws/assets/Robots/GenBot1K-v7",
+                        help="Base path to robot assets (required if description_filename is provided)")
+    parser.add_argument("--dynamic_joint_des_dim", type=int, default=None,
+                        help="Dimension of joint description vector. If not specified, auto-detected: "
+                             "18 for baseline, 24 when using description files with limb bboxes.")
+    
+    # Wandb arguments
+    parser.add_argument("--wandb", action=argparse.BooleanOptionalAction, default=True, help="Enable wandb logging (syncs tensorboard). Use --no-wandb to disable.")
+    parser.add_argument("--wandb_project", type=str, default="esl", help="Wandb project name.")
+    parser.add_argument("--wandb_entity", type=str, default="velythyl", help="Wandb entity (team/username).")
+    parser.add_argument("--wandb_name", type=str, default=None, help="Wandb run name. Defaults to exp_name.")
 
     args = parser.parse_args()
 
@@ -351,6 +374,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
               f"Test Loss: {get_meter_dict_avg(test_loss_meters):.6f}")
 
     writer.close()
+    if wandb.run is not None:
+        wandb.finish()
     print("[INFO] Training completed. TensorBoard logs saved.")
 
 
@@ -365,6 +390,18 @@ def main():
     config_save_path = os.path.join(log_dir, "config.yaml")
     save_args_to_yaml(args_cli, config_save_path)
     print(f"[INFO] Config saved to {config_save_path}")
+
+    # Initialize wandb with tensorboard sync
+    if args_cli.wandb:
+        wandb.init(
+            project=args_cli.wandb_project,
+            entity=args_cli.wandb_entity,
+            name=args_cli.wandb_name or args_cli.exp_name,
+            config=vars(args_cli),
+            sync_tensorboard=True,
+            dir=log_dir
+        )
+        print(f"[INFO] Wandb initialized with tensorboard sync")
 
     # Dataset paths
     assert args_cli.train_set is not None, f"Please specify value for arg --train_set"
@@ -383,7 +420,9 @@ def main():
         max_files_in_memory=args_cli.max_files_in_memory,
         h5_repeat_factor=args_cli.h5_repeat_factor,
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory
+        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
+        description_filename=args_cli.description_filename,
+        asset_base_path=args_cli.asset_base_path
     )
 
     # Validation dataset
@@ -394,7 +433,9 @@ def main():
         max_files_in_memory=args_cli.max_files_in_memory,
         h5_repeat_factor=1,
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory
+        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
+        description_filename=args_cli.description_filename,
+        asset_base_path=args_cli.asset_base_path
     )
 
     # Test dataset
@@ -405,15 +446,30 @@ def main():
         max_files_in_memory=args_cli.max_files_in_memory,
         h5_repeat_factor=1,
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory
+        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
+        description_filename=args_cli.description_filename,
+        asset_base_path=args_cli.asset_base_path
     )
 
     model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"[INFO] Using device: {model_device}")
+
+    # Determine dynamic joint description dimension
+    # Auto-detect based on whether the dataset is using limb bboxes
+    if args_cli.dynamic_joint_des_dim is not None:
+        dynamic_joint_des_dim = args_cli.dynamic_joint_des_dim
+    elif train_dataset.use_limb_bboxes:
+        # 18 is the baseline, extra_des_dim is auto-detected from description file
+        dynamic_joint_des_dim = 18 + train_dataset.extra_des_dim
+        print(f"[INFO] Limb bboxes detected, auto-setting dynamic_joint_des_dim={dynamic_joint_des_dim} (18 base + {train_dataset.extra_des_dim} extra)")
+    else:
+        dynamic_joint_des_dim = 18  # baseline
+        print("[INFO] No limb bboxes in description file, using baseline dynamic_joint_des_dim=18")
 
     # Define model, optimizer, and loss
     if args_cli.model == 'urma':
         from urma_model.policy_3head_scale2 import get_policy
-        policy = get_policy(model_device)
+        policy = get_policy(model_device, dynamic_joint_des_dim=dynamic_joint_des_dim)
     else:
         raise NotImplementedError(f'model type {args_cli.model} not implemented')
 
@@ -465,5 +521,29 @@ def main():
         start_epoch=start_epoch
     )
 
-if __name__ == "__main__":
+
+@hydra.main(config_path="conf", config_name="config", version_base=None)
+def hydra_main(cfg: DictConfig):
+    """Hydra entry point for launching with hydra-submitit.
+    
+    Extracts argparse arguments from cfg.argparse and calls main().
+    """
+    sys.argv = [sys.argv[0]] + shlex.split(cfg.argparse + " " + cfg.append_argparse)
     main()
+
+
+if __name__ == "__main__":
+    hydra_main()
+
+
+"""
+# debugging
+ln -s /home/mila/c/charlie.gauthier/embodiment-scaling-laws/ /tmp
+python3 distillation/run_distillation.py  append_argparse="--max_files_in_memory 256"
+
+
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 hydra.launcher.partition=long 
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=48 hydra.launcher.array_parallelism=300 hydra.launcher.partition=main append_argparse="--max_files_in_memory 256"
+
+
+"""

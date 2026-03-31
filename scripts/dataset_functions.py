@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import torch
 import yaml
+import json
 import warnings
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import TensorDataset
@@ -146,7 +147,8 @@ class LocomotionDataset(Dataset):
     GENERAL_POLICY_STATE_LEN = 11
 
     def __init__(self, folder_paths, max_files_in_memory, train_mode, val_ratio, h5_repeat_factor,
-                 max_parallel_envs_per_file, max_envs_per_file_in_memory):
+                 max_parallel_envs_per_file, max_envs_per_file_in_memory,
+                 description_filename: str = None, asset_base_path: str = None):
         """
         Initialize the LocomotionDataset.
 
@@ -166,6 +168,10 @@ class LocomotionDataset(Dataset):
             - h5_repeat_factor: Number of times we repeat one h5 file consecutively in one epoch. This gives us more batches without additional IO, but may alter the training dynamics a bit.
             - max_parallel_envs_per_file: Maximum number of parallel environments to load from one .h5 file. This canbe used to control the portion of data we want to use for training.
             - max_envs_per_file_in_memory: Maximum number of environments to load from one .h5 file into memory. This is useful when the number of environments in one .h5 file is larger than the number of environments we can load into memory. This trades off between IO and RAM usage.
+            - description_filename: Name of robot description JSON file to load from each robot's asset folder.
+                                   If None, uses baseline 18-dim description (no limb bboxes).
+                                   Examples: "robot_description_vec_with_bboxes.json", "robot_description_vec_custom.json"
+            - asset_base_path: Base path to robot assets (required if description_filename is provided)
         """
         
         self.folder_paths = np.array(folder_paths)
@@ -183,6 +189,12 @@ class LocomotionDataset(Dataset):
         self.h5_repeat_factor = h5_repeat_factor
         self.total_samples = 0
 
+        # Robot description parameters for limb shape conditioning
+        self.description_filename = description_filename
+        self.asset_base_path = asset_base_path
+        self.robot_desc_cache = {}  # Cache for robot description JSONs
+        self.use_limb_bboxes = False  # Will be set to True if descriptions contain bbox data
+
         # Thread-safe cache for loaded files
         # global global_cache    # we must use global reference, otherwise every thread will spawn its own cache
         self.cache = ThreadSafeDict(max_size=max_files_in_memory)
@@ -190,6 +202,12 @@ class LocomotionDataset(Dataset):
 
         # Map file indices and prepare dataset structure
         self._prepare_file_indices()
+
+        # Preload robot descriptions if a custom description file is specified
+        if self.description_filename is not None:
+            if self.asset_base_path is None:
+                raise ValueError("asset_base_path is required when description_filename is provided")
+            self._preload_robot_descriptions()
 
         # Compute hit rate for caching, for debugging purpose
         # self.cache_hit_count = AverageMeter()
@@ -205,7 +223,9 @@ class LocomotionDataset(Dataset):
         # Verbose output
         print(f"[INFO]: Initialized dataset with {len(self)} samples from {len(self.folder_paths)} folders. "
               f"\n\tGot {len(self.folder_idx_to_file_name)} robots" # : {list(self.folder_idx_to_file_name.values())}
-              f"\n\th5_repeat_factor={self.h5_repeat_factor}")
+              f"\n\th5_repeat_factor={self.h5_repeat_factor}"
+              f"\n\tdescription_filename={self.description_filename}"
+              f"\n\tuse_limb_bboxes={self.use_limb_bboxes}")
 
     def _load_metadata(self, folder_path):
         """
@@ -224,6 +244,175 @@ class LocomotionDataset(Dataset):
         with open(metadata_path, "r") as metadata_file:
             metadata = yaml.safe_load(metadata_file)
         return metadata
+
+    def _robot_name_to_asset_folder(self, robot_name: str) -> str:
+        """Convert h5py folder name to robot asset folder path.
+        
+        Example: Gendog10_gendog_10_KneeNum_... -> gen_dogs/gendog_10_KneeNum_...
+        """
+        robot_name_lower = robot_name.lower()
+        if robot_name_lower.startswith("gendog"):
+            # Find where the actual robot folder name starts
+            # Format: Gendog{N}_gendog_{N}_...
+            parts = robot_name.split("_", 1)
+            if len(parts) > 1:
+                return f"gen_dogs/{parts[1]}"
+            else:
+                raise ValueError(f"Could not parse robot name: {robot_name}")
+        elif robot_name_lower.startswith("genhexapod"):
+            parts = robot_name.split("_", 1)
+            if len(parts) > 1:
+                return f"gen_hexapods/{parts[1]}"
+            else:
+                raise ValueError(f"Could not parse robot name: {robot_name}")
+        elif robot_name_lower.startswith("genhumanoid"):
+            parts = robot_name.split("_", 1)
+            if len(parts) > 1:
+                return f"gen_humanoids/{parts[1]}"
+            else:
+                raise ValueError(f"Could not parse robot name: {robot_name}")
+        else:
+            raise ValueError(f"Unknown robot type: {robot_name}")
+
+    def _preload_robot_descriptions(self):
+        """Load robot description JSON files for all robots in dataset.
+        
+        The JSON file specified by self.description_filename is loaded from each robot's asset folder.
+        If the JSON contains 'link_info' and 'joint_to_child_link' fields, limb bbox injection is enabled.
+        
+        Expected JSON structure (extends robot_description_vec.json):
+        {
+            "joint_info": {
+                "joint_name": {
+                    "joint_index": int,
+                    "joint_lower_limit": float,
+                    "joint_upper_limit": float,
+                    ... (other joint properties)
+                },
+                ...
+            },
+            "link_info": {  # NEW: required for limb bbox injection
+                "link_name": {
+                    "bbox": <any structure, will be flattened via np.array().flatten()>,
+                    "mass": float
+                },
+                ...
+            },
+            "joint_to_child_link": {  # NEW: required for limb bbox injection
+                "joint_name": "child_link_name",
+                ...
+            }
+        }
+        
+        Supported bbox formats (all flattened automatically):
+          - Nested: [[min_x, min_y, min_z], [max_x, max_y, max_z]] -> 6 dims
+          - Flat: [data1, data2, data3, ...] -> N dims
+          - Any nested structure that np.array().flatten() can handle
+        
+        Generate with: python generation/get_description_vector_sapien.py --root_dir <robot_type> --output_suffix <suffix>
+        """
+        print(f"[INFO]: Preloading robot descriptions from '{self.description_filename}' for {len(self.folder_idx_to_file_name)} robots...")
+        
+        has_bbox_data = None  # Track whether all robots have bbox data
+        
+        for folder_idx, robot_name in self.folder_idx_to_file_name.items():
+            if robot_name in self.robot_desc_cache:
+                continue  # Already loaded
+            try:
+                asset_folder = self._robot_name_to_asset_folder(robot_name)
+                json_path = os.path.join(
+                    self.asset_base_path, asset_folder, self.description_filename
+                )
+                if not os.path.exists(json_path):
+                    raise FileNotFoundError(
+                        f"Robot description file not found: {json_path}\n"
+                        f"Please generate with: python generation/get_description_vector_sapien.py --root_dir <robot_type> --output_suffix <suffix>"
+                    )
+                with open(json_path, 'r') as f:
+                    desc = json.load(f)
+                
+                # Check if this description has limb bbox data
+                robot_has_bbox = 'link_info' in desc and 'joint_to_child_link' in desc
+                
+                if has_bbox_data is None:
+                    has_bbox_data = robot_has_bbox
+                elif has_bbox_data != robot_has_bbox:
+                    raise ValueError(
+                        f"Inconsistent robot descriptions: some have link_info/joint_to_child_link, some don't. "
+                        f"Robot '{robot_name}' has bbox data: {robot_has_bbox}, expected: {has_bbox_data}"
+                    )
+                
+                self.robot_desc_cache[robot_name] = desc
+            except Exception as e:
+                raise RuntimeError(f"Failed to load robot description for {robot_name}: {e}")
+        
+        # Set flag for whether to inject limb bboxes
+        self.use_limb_bboxes = has_bbox_data if has_bbox_data is not None else False
+        
+        # Determine extra description dimension by sampling actual data
+        self.extra_des_dim = 0
+        if self.use_limb_bboxes and self.robot_desc_cache:
+            # Sample one robot to determine the bbox dimension
+            sample_robot = next(iter(self.robot_desc_cache.keys()))
+            sample_desc = self.robot_desc_cache[sample_robot]
+            sample_link = next(iter(sample_desc['link_info'].keys()))
+            sample_bbox = sample_desc['link_info'][sample_link]['bbox']
+            # Flatten any nested structure (e.g., [[min], [max]] or [data1, data2, ...])
+            self.extra_des_dim = len(np.array(sample_bbox).flatten())
+            
+            # Validate bbox dimension consistency across ALL robots and links
+            for robot_name, desc in self.robot_desc_cache.items():
+                for link_name, link_data in desc['link_info'].items():
+                    bbox = link_data['bbox']
+                    bbox_dim = len(np.array(bbox).flatten())
+                    if bbox_dim != self.extra_des_dim:
+                        raise ValueError(
+                            f"Inconsistent bbox dimensions in robot '{robot_name}', link '{link_name}': "
+                            f"got {bbox_dim} dims, expected {self.extra_des_dim}. "
+                            f"All robots and links must have identical bbox format after flattening. "
+                            f"Regenerate all descriptions with: "
+                            f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
+                        )
+            
+            print(f"[INFO]: Limb bbox injection ENABLED - extra_des_dim={self.extra_des_dim}")
+        else:
+            print(f"[INFO]: Limb bbox injection DISABLED - descriptions do not contain bbox data")
+
+    def _get_limb_bbox_for_batch(self, robot_name: str, joint_names: list) -> torch.Tensor:
+        """Get limb bboxes for all joints in a robot.
+        
+        Returns tensor of shape (nr_joints, extra_des_dim). Default is 6: [min_x, min_y, min_z, max_x, max_y, max_z].
+        Custom description files can have different dimensions.
+        """
+        desc = self.robot_desc_cache.get(robot_name)
+        if desc is None or 'link_info' not in desc or 'joint_to_child_link' not in desc:
+            # Return zeros if robot description not available or missing required fields
+            return torch.zeros((len(joint_names), self.extra_des_dim), dtype=torch.float32)
+        
+        joint_to_child = desc['joint_to_child_link']
+        link_info = desc['link_info']
+        
+        limb_bboxes = []
+        for joint_name in joint_names:
+            child_link = joint_to_child.get(joint_name)
+            if not child_link:
+                raise ValueError(
+                    f"Joint '{joint_name}' not found in joint_to_child_link mapping for robot '{robot_name}'. "
+                    f"Please regenerate robot_description_vec.json with: "
+                    f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
+                )
+            if child_link not in link_info:
+                raise ValueError(
+                    f"Child link '{child_link}' (from joint '{joint_name}') not found in link_info for robot '{robot_name}'. "
+                    f"Please regenerate robot_description_vec.json with: "
+                    f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
+                )
+            bbox = link_info[child_link]['bbox']
+            # Flatten any nested structure (e.g., [[min], [max]] or [data1, data2, ...])
+            flat_bbox = np.array(bbox).flatten().tolist()
+            limb_bboxes.append(flat_bbox)
+        
+        return torch.tensor(limb_bboxes, dtype=torch.float32)
 
     def _prepare_file_indices(self):
         """
@@ -370,7 +559,7 @@ class LocomotionDataset(Dataset):
 
         return input_sample, target_sample, metadata, self.folder_idx_to_file_name[folder_idx], torch.tensor(io_time)
 
-    def _transform_samples(self, input_samples, target_samples, metadata_list):
+    def _transform_samples(self, input_samples, target_samples, metadata_list, robot_name=None):
         """
         Transform a single input and target sample into its components.
 
@@ -378,6 +567,7 @@ class LocomotionDataset(Dataset):
             input_samples (np.ndarray): The input sample (shape: [B, D]).
             target_samples (np.ndarray): The target sample (shape: [B, T]).
             metadata (dict): Metadata list for samples.
+            robot_name (str): Robot name for limb shape lookup (optional).
 
         Returns:
             tuple: Transformed components.
@@ -406,6 +596,39 @@ class LocomotionDataset(Dataset):
         dynamic_joint_description = dynamic_joint_combined_state[..., :dynamic_joint_description_size]
         dynamic_joint_state = dynamic_joint_combined_state[..., dynamic_joint_description_size:]
 
+        # Inject limb shape information if enabled
+        if self.use_limb_bboxes and robot_name is not None:
+            # Get joint names from robot description
+            desc = self.robot_desc_cache.get(robot_name)
+            if desc is not None and 'joint_info' in desc:
+                all_joint_names = list(desc['joint_info'].keys())
+                
+                # Validate joint count
+                if len(all_joint_names) < nr_dynamic_joint_observations:
+                    raise ValueError(
+                        f"Robot '{robot_name}' has {len(all_joint_names)} joints in description file, "
+                        f"but dataset metadata expects {nr_dynamic_joint_observations}. "
+                        f"Please check: (1) robot URDF joint count, (2) dataset metadata"
+                    )
+                
+                joint_names = all_joint_names[:nr_dynamic_joint_observations]
+                limb_bboxes = self._get_limb_bbox_for_batch(robot_name, joint_names)
+                limb_bboxes = limb_bboxes.unsqueeze(0).expand(batch_size, -1, -1).cuda()
+                
+                # Note: limb bboxes are NOT normalized (raw values in meters)
+                # This differs from foot_size in locomotion_env.py which is normalized.
+                # Raw values preserve scale information across different robot sizes.
+                
+                # Concatenate to description vector: 18 -> 24 dims
+                dynamic_joint_description = torch.cat([
+                    dynamic_joint_description, limb_bboxes
+                ], dim=-1)
+                
+                # Validate expected shape after concatenation
+                expected_dim = dynamic_joint_description_size + self.extra_des_dim
+                assert dynamic_joint_description.shape[-1] == expected_dim, \
+                    f"Shape mismatch after bbox concat: got {dynamic_joint_description.shape[-1]}, expected {expected_dim}"
+
         # General Policy State Transformation
         trunk_angular_vel_update_obs_idx = metadata["trunk_angular_vel_update_obs_idx"]
         goal_velocity_update_obs_idx = metadata["goal_velocity_update_obs_idx"]
@@ -424,7 +647,7 @@ class LocomotionDataset(Dataset):
 
         # Return transformed inputs and target
         return (
-            dynamic_joint_description,  # Shape: (nr_dynamic_joint_observations, dynamic_joint_description_size)
+            dynamic_joint_description,  # Shape: (nr_dynamic_joint_observations, dynamic_joint_description_size) or (nr_dynamic_joint_observations, dynamic_joint_description_size + extra_des_dim) if bbox mode
             dynamic_joint_state,  # Shape: (nr_dynamic_joint_observations, remaining_length)
             general_policy_state,  # Shape: (<concatenated_dim>)
             target  # Shape: (12,)
@@ -447,9 +670,9 @@ class LocomotionDataset(Dataset):
         inputs, targets, metadata_list, robot_names, io_times = zip(*batch)  # inputs: list of tuples, targets: list of tensors
         assert len(set(robot_names)) == 1, f"got different robot names in a batch: {set(robot_names)}"
 
-        # batch transform these samples
+        # batch transform these samples (pass robot_name for limb shape conditioning)
         st = time.time()
-        transformed_sample = self._transform_samples(inputs, targets, metadata_list)
+        transformed_sample = self._transform_samples(inputs, targets, metadata_list, robot_name=robot_names[0])
         inputs, targets = transformed_sample[:-1], transformed_sample[-1]
         processing_times = time.time() - st
 

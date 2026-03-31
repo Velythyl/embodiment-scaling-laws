@@ -201,6 +201,30 @@ def extract_info(robot_urdf_path, train_cfg_path, save_path, root_name):
             }
     info['foot_info'] = foot_info
 
+    # Link information (per-link bounding boxes for all links)
+    link_info = {}
+    for link in robot.get_links():
+        try:
+            bbox = get_local_bbox_for_link(link)
+            link_info[link.name] = {
+                'bbox': [x.tolist() for x in bbox],
+                'mass': link.mass,
+            }
+        except NotImplementedError:
+            # Skip links with unsupported collision shapes
+            link_info[link.name] = {
+                'bbox': [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                'mass': link.mass,
+            }
+    info['link_info'] = link_info
+
+    # Joint-to-child-link mapping (for per-limb shape conditioning)
+    joint_to_child_link = {}
+    for joint_urdf in robot_urdf.joints:
+        if joint_urdf.joint_type != 'fixed':  # Only active joints
+            joint_to_child_link[joint_urdf.name] = joint_urdf.child
+    info['joint_to_child_link'] = joint_to_child_link
+
     # Save information to file
     with open(save_path, 'w') as f:
         json.dump(info, f, indent=4)
@@ -211,15 +235,44 @@ def extract_info(robot_urdf_path, train_cfg_path, save_path, root_name):
 
 
 if __name__ == '__main__':
-    root_dir = 'gen_dogs'
-    root_link_name = 'trunk'        # truck for Gendog/Genhexapod, base for go2, and pelvis for Genhumanoid 
+    import argparse
+    parser = argparse.ArgumentParser(description="Extract robot description vectors from URDF files.")
+    parser.add_argument("--root_dir", type=str, default="gen_dogs",
+                        help="Directory containing robot assets (gen_dogs, gen_hexapods, gen_humanoids)")
+    parser.add_argument("--root_link_name", type=str, default=None,
+                        help="Name of root link (default: trunk for dogs/hexapods, pelvis for humanoids)")
+    parser.add_argument("--output_suffix", type=str, default="",
+                        help="Suffix for output file (e.g., '_v2' for robot_description_vec_v2.json)")
+    parser.add_argument("--dry_run", action="store_true",
+                        help="Print what would be done without actually doing it")
+    args = parser.parse_args()
+
+    root_dir = args.root_dir
+    
+    # Default root link name based on robot type
+    if args.root_link_name is None:
+        if 'humanoid' in root_dir.lower():
+            root_link_name = 'pelvis'
+        else:
+            root_link_name = 'trunk'  # trunk for Gendog/Genhexapod
+    else:
+        root_link_name = args.root_link_name
+
     asset_dirs = sorted([os.path.join(root_dir, name) for name in os.listdir(root_dir) if
                   os.path.isdir(os.path.join(root_dir, name))])
 
-    for asset_dir in tqdm(asset_dirs):
-        extract_info(
-            robot_urdf_path=f'{asset_dir}/robot.urdf',
-            train_cfg_path=f'{asset_dir}/train_cfg_v2.json',
-            save_path=f'{asset_dir}/robot_description_vec.json',
-            root_name=root_link_name,
-        )
+    output_filename = f'robot_description_vec{args.output_suffix}.json'
+
+    if args.dry_run:
+        print(f"[DRY RUN] Would process {len(asset_dirs)} robots in {root_dir}")
+        print(f"[DRY RUN] Root link name: {root_link_name}")
+        print(f"[DRY RUN] Output filename: {output_filename}")
+        print(f"[DRY RUN] Sample directories: {asset_dirs[:3]}")
+    else:
+        for asset_dir in tqdm(asset_dirs):
+            extract_info(
+                robot_urdf_path=f'{asset_dir}/robot.urdf',
+                train_cfg_path=f'{asset_dir}/train_cfg_v2.json',
+                save_path=f'{asset_dir}/{output_filename}',
+                root_name=root_link_name,
+            )

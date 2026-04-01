@@ -556,6 +556,6 @@ python3 distillation/run_distillation.py  append_argparse="--max_files_in_memory
 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 hydra.launcher.partition=long 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=48 hydra.launcher.array_parallelism=300 hydra.launcher.partition=main append_argparse="--max_files_in_memory 256"
-
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300
 
 """

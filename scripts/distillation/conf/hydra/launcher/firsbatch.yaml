@@ -33,7 +33,7 @@ setup:
   - 'mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl"'
   #- 'cp -r /network/scratch/c/charlie.gauthier/embodiment-scaling-laws /tmp/esl'
   - "echo 'Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to /tmp/embodiment-scaling-laws/logs/rsl_rl'"
-  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P128 -I% rsync --quiet -Pa % /tmp/embodiment-scaling-laws/logs/rsl_rl'
+  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P16 -I% rsync --quiet -Pa % /tmp/embodiment-scaling-laws/logs/rsl_rl'
   - "echo 'Done syncing training data'"
   - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/env_isaaclab/bin/activate"
   - "sleep $((RANDOM % 100))"

@@ -25,9 +25,9 @@ setup:
   #- 'find "${oc.env:SCRATCH}/unimals_100" -maxdepth 2 -print0 | xargs -0 -n1 -P32 -I% rsync -Pa % ${oc.env:SLURM_TMPDIR}/unimals_100'
   - 'mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl"'
   #- 'cp -r /network/scratch/c/charlie.gauthier/embodiment-scaling-laws /tmp/esl'
-  - "echo 'Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to /tmp/embodiment-scaling-laws/logs/rsl_rl'"
+  - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to /tmp/embodiment-scaling-laws/logs/rsl_rl\""
   - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P16 -I% rsync --quiet -Pa % /tmp/embodiment-scaling-laws/logs/rsl_rl'
-  - "echo 'Done syncing training data'"
+  - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Done syncing training data\""
   #- 'find "${oc.env:SCRATCH}/unimals_100" -mindepth 1 -maxdepth 1 -print0 | xargs -0  -P32 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/unimals_100"'
   #- 'mkdir -p "$SLURM_TMPDIR/vmalatentdir"'
   #- 'find /home/mila/c/charlie.gauthier/voxvae/latentdir -mindepth 1 -maxdepth 1 -print0 | xargs -0  -P32 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/vmalatentdir"'

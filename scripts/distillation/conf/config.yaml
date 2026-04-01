@@ -1,0 +1,11 @@
+# Hydra configuration for run_distillation.py
+# Use with: python run_distillation.py --config-name=config
+# Or call hydra_main() directly for hydra-submitit
+
+defaults:
+  - _self_
+  - secrets: secrets
+
+# Argparse arguments as a string (parsed with shlex.split)
+argparse: "--train_set robot1 robot2 --model urma --exp_name my_experiment"
+append_argparse: ""

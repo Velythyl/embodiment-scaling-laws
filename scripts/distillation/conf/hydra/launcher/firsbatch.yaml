@@ -33,10 +33,12 @@ setup:
   - 'mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl"'
   #- 'cp -r /network/scratch/c/charlie.gauthier/embodiment-scaling-laws /tmp/esl'
   - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to /tmp/embodiment-scaling-laws/logs/rsl_rl\""
-  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P2 -I% rsync --quiet -Pa % /tmp/embodiment-scaling-laws/logs/rsl_rl'
+  # - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P2 -I% rsync --quiet -Pa % /tmp/embodiment-scaling-laws/logs/rsl_rl'
+  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P16 -I% bash -c '"'"'d=$(basename "$1") && mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" && tar -C "$1" -cf - . | tar -C "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" -xpf -'"'"' _ %'
   - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Done syncing training data\""
   - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/env_isaaclab/bin/activate"
   - "sleep $((RANDOM % 100))"
+  - "echo Starting Training Now..."
 
 # module load cuda/12.1.1/cudnn
 # module load python/3.10

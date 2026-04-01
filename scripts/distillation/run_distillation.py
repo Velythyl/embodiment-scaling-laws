@@ -415,6 +415,25 @@ def main():
         )
         print(f"[INFO] Wandb initialized")
 
+    # Debug: Check dataset directory contents
+    import subprocess
+    print(f"[INFO] Checking dataset directory: {args_cli.dataset_dir}")
+    sys.stdout.flush()
+    try:
+        result = subprocess.run(['ls', args_cli.dataset_dir], capture_output=True, text=True, timeout=30)
+        lines = result.stdout.strip().split('\n')
+        print(f"[INFO] ls {args_cli.dataset_dir} (first 10 lines of {len(lines)} total):")
+        for line in lines[:10]:
+            print(f"  {line}")
+        if len(lines) > 10:
+            print(f"  ... and {len(lines) - 10} more")
+        if result.stderr:
+            print(f"[WARN] ls stderr: {result.stderr}")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[ERROR] Failed to ls dataset directory: {e}")
+        sys.stdout.flush()
+
     # Dataset paths
     assert args_cli.train_set is not None, f"Please specify value for arg --train_set"
     train_set_paths = [get_most_recent_h5py_record_path(args_cli.dataset_dir, task) for task in args_cli.train_set]

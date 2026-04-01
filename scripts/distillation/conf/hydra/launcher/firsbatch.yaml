@@ -36,6 +36,7 @@ setup:
   - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl\""
   - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P32 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl"'
   - 'ln -s  $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl /tmp/embodiment-scaling-laws/logs/rsl_rl'
+  - '[ -L /tmp/embodiment-scaling-laws/logs/rsl_rl ] || { echo "ERROR: symlink creation failed"; exit 1; }'
   #- >-
   #  find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 |
   #  xargs -0 -P16 -I% bash -c 'd=$(basename "$1") && mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" && tar -C "$1" -cf - . | tar -C "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" -xpf -' _ %

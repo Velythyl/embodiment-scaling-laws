@@ -482,28 +482,61 @@ def main():
         print("[INFO] No limb bboxes in description file, using baseline dynamic_joint_des_dim=18")
 
     # Define model, optimizer, and loss
-    if args_cli.model == 'urma':
-        from urma_model.policy_3head_scale2 import get_policy
-        policy = get_policy(model_device, dynamic_joint_des_dim=dynamic_joint_des_dim)
-    else:
-        raise NotImplementedError(f'model type {args_cli.model} not implemented')
+    print(f"[INFO] About to load model: {args_cli.model}")
+    sys.stdout.flush()
+    try:
+        if args_cli.model == 'urma':
+            print("[INFO] Importing urma_model.policy_3head_scale2...")
+            sys.stdout.flush()
+            from urma_model.policy_3head_scale2 import get_policy
+            print("[INFO] Import successful, calling get_policy()...")
+            sys.stdout.flush()
+            policy = get_policy(model_device, dynamic_joint_des_dim=dynamic_joint_des_dim)
+            print("[INFO] get_policy() completed successfully")
+            sys.stdout.flush()
+        else:
+            raise NotImplementedError(f'model type {args_cli.model} not implemented')
+    except Exception as e:
+        print(f"[ERROR] Failed to load model: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
     print('policy architecture:\n', policy)
+    sys.stdout.flush()
 
+    print("[INFO] Setting up criterion and optimizer...")
+    sys.stdout.flush()
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(
         policy.parameters(),
         lr=args_cli.lr,
         weight_decay=1e-5,
     )
+    print("[INFO] Optimizer created successfully")
+    sys.stdout.flush()
 
     # We need to get the actual iteration length by checking the dataloader, but note that the length varies
     # for different training hyper-params. Be careful when fine-tuning models.
-    train_dataloader = train_dataset.get_data_loader(
-        batch_size=args_cli.batch_size, shuffle=True, num_workers=args_cli.num_workers
-    )
+    print("[INFO] Creating train dataloader for scheduler setup...")
+    sys.stdout.flush()
+    try:
+        train_dataloader = train_dataset.get_data_loader(
+            batch_size=args_cli.batch_size, shuffle=True, num_workers=args_cli.num_workers
+        )
+        print(f"[INFO] Train dataloader created, length={len(train_dataloader)}")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[ERROR] Failed to create train dataloader: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                            T_max=args_cli.num_epochs*len(train_dataloader))
+    print("[INFO] Scheduler created successfully")
+    sys.stdout.flush()
 
     # load checkpoint if path specified
     if args_cli.resume:
@@ -516,25 +549,36 @@ def main():
         start_epoch = 0
 
     # Train the policy
-    train(
-        policy=policy,
-        criterion=criterion,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        train_dataset=train_dataset,
-        val_dataset=val_dataset,
-        test_dataset=test_dataset,
-        num_epochs=args_cli.num_epochs,
-        model_device=model_device,
-        log_dir=log_dir,
-        checkpoint_interval=args_cli.checkpoint_interval,
-        model=args_cli.model,
-        gradient_acc_steps=args_cli.gradient_acc_steps,
-        batch_size=args_cli.batch_size,
-        num_workers=args_cli.num_workers,
-        use_amp=bool(args_cli.use_amp),
-        start_epoch=start_epoch
-    )
+    print(f"[INFO] About to start training from epoch {start_epoch}...")
+    sys.stdout.flush()
+    try:
+        train(
+            policy=policy,
+            criterion=criterion,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            train_dataset=train_dataset,
+            val_dataset=val_dataset,
+            test_dataset=test_dataset,
+            num_epochs=args_cli.num_epochs,
+            model_device=model_device,
+            log_dir=log_dir,
+            checkpoint_interval=args_cli.checkpoint_interval,
+            model=args_cli.model,
+            gradient_acc_steps=args_cli.gradient_acc_steps,
+            batch_size=args_cli.batch_size,
+            num_workers=args_cli.num_workers,
+            use_amp=bool(args_cli.use_amp),
+            start_epoch=start_epoch
+        )
+        print("[INFO] Training function returned successfully")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[ERROR] Training failed with exception: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
@@ -544,11 +588,31 @@ def hydra_main(cfg: DictConfig):
     Extracts argparse arguments from cfg.argparse and calls main().
     """
     sys.argv = [sys.argv[0]] + shlex.split(cfg.argparse + " " + cfg.append_argparse)
-    main()
+    try:
+        print("[INFO] hydra_main: Calling main()...")
+        sys.stdout.flush()
+        main()
+        print("[INFO] hydra_main: main() completed successfully")
+        sys.stdout.flush()
+    except Exception as e:
+        print(f"[ERROR] hydra_main: main() raised exception: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
 
 if __name__ == "__main__":
-    hydra_main()
+    print("[INFO] Script starting, calling hydra_main...")
+    sys.stdout.flush()
+    try:
+        hydra_main()
+    except Exception as e:
+        print(f"[ERROR] Top-level exception: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        raise
 
 
 """

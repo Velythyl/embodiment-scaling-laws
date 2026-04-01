@@ -78,7 +78,7 @@ def parse_arguments():
                              "Examples: 'robot_description_vec_with_bboxes.json' for computed bboxes, "
                              "'robot_description_vec_custom.json' for custom vectors.")
     parser.add_argument("--asset_base_path", type=str,
-                        default="exts/embodiment_scaling_laws/embodiment_scaling_laws/assets/Robots/GenBot1K-v7",
+                        default=os.path.join(os.environ.get("SCRATCH", ""), "embodiment-scaling-laws/exts/embodiment_scaling_laws/embodiment_scaling_laws/assets/Robots/GenBot1K-v7"),
                         help="Base path to robot assets (required if description_filename is provided)")
     parser.add_argument("--dynamic_joint_des_dim", type=int, default=None,
                         help="Dimension of joint description vector. If not specified, auto-detected: "
@@ -424,6 +424,9 @@ def main():
         test_set_paths = list()
         print(f'[INFO] No test set provided.')
 
+    # Expand environment variables in asset_base_path (e.g., $SCRATCH)
+    asset_base_path = os.path.expandvars(args_cli.asset_base_path)
+
     # Training dataset
     train_dataset = LocomotionDataset(
         folder_paths=train_set_paths,
@@ -434,7 +437,7 @@ def main():
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
         description_filename=args_cli.description_filename,
-        asset_base_path=args_cli.asset_base_path
+        asset_base_path=asset_base_path
     )
 
     # Validation dataset
@@ -447,7 +450,7 @@ def main():
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
         description_filename=args_cli.description_filename,
-        asset_base_path=args_cli.asset_base_path
+        asset_base_path=asset_base_path
     )
 
     # Test dataset
@@ -460,7 +463,7 @@ def main():
         max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
         description_filename=args_cli.description_filename,
-        asset_base_path=args_cli.asset_base_path
+        asset_base_path=asset_base_path
     )
 
     model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -551,7 +554,7 @@ if __name__ == "__main__":
 """
 # debugging
 ln -s /home/mila/c/charlie.gauthier/embodiment-scaling-laws/ /tmp
-python3 distillation/run_distillation.py  append_argparse="--max_files_in_memory 256"
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml append_argparse="--max_files_in_memory 256"
 
 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 hydra.launcher.partition=long 

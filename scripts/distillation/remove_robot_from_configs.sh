@@ -25,4 +25,5 @@ for robot in "$@"; do
     fi
 done
 
+# Example usage:
 # ./scripts/distillation/remove_robot_from_configs.sh Genhumanoid102 Genhumanoid166

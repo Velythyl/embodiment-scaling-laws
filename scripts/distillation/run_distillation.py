@@ -6,7 +6,6 @@ import gc
 import sys, os
 import shlex
 
-from torch.utils.tensorboard import SummaryWriter
 import wandb
 import hydra
 from omegaconf import DictConfig
@@ -43,7 +42,7 @@ def parse_arguments():
     parser.add_argument("--exp_name", type=str, default=None,
                         help="Name of the experiment. If provided, the current date and time will be appended. "
                              "Default is the current date and time.")
-    parser.add_argument("--checkpoint_interval", type=int, default=1, help="Save checkpoint every N epochs.")
+    parser.add_argument("--checkpoint_interval", type=int, default=5, help="Save checkpoint every N epochs.")
     parser.add_argument("--log_dir", type=str, default="log_dir", help="Base directory for logs and checkpoints.")
     parser.add_argument("--lr", type=float, default=3e-4, help="Unit learning rate (for a batch size of 512)")
     parser.add_argument("--num_workers", type=int, default=0, help="Number of workers for torch data loader.")
@@ -92,6 +91,18 @@ def parse_arguments():
     parser.add_argument("--wandb_name", type=str, default=None, help="Wandb run name. Defaults to exp_name.")
 
     args = parser.parse_args()
+
+    # Pretty print args (YAML-like), skipping long list fields
+    print("\n" + "="*50)
+    print("Arguments:")
+    print("="*50)
+    skip_fields = {'train_set', 'test_set'}
+    for key, value in sorted(vars(args).items()):
+        if key in skip_fields:
+            print(f"  {key}: <{len(value) if value else 0} items>")
+        else:
+            print(f"  {key}: {value}")
+    print("="*50 + "\n")
 
     # Load and override arguments from YAML file if specified
     if args.config:
@@ -151,7 +162,6 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
     """Training loop with validation, TensorBoard logging, and checkpoint saving."""
     scaler = torch.cuda.amp.GradScaler()
 
-    writer = SummaryWriter(log_dir=log_dir)
     train_loss_meters = {}
     val_loss_meters = {}
     test_loss_meters = {}
@@ -237,23 +247,24 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Log times
                 # start_time = time.time()
                 if index % 100 == 0:
-                    writer.add_scalar("Train/times/io_per_thread", io_times.mean().item(), iteration)
-                    writer.add_scalar("Train/times/data_processing_per_thread", processing_times.mean().item(), iteration)
-                    writer.add_scalar("Train/times/dataloader_time", dataloader_time, iteration)
-                    writer.add_scalar("Train/times/move_cuda", move_cuda_time, iteration)
-                    writer.add_scalar("Train/times/forward", forward_time, iteration)
-                    writer.add_scalar("Train/times/backward", backward_time, iteration)
-
-                    # Log memory
-                    writer.add_scalar("Train/ram-system-used", get_system_ram_usage(), iteration)
-                    writer.add_scalar("Train/ram-process-used", get_process_ram_usage(), iteration)
-                    # print(f'{time.time() - start_time:.4f} | {get_meter_dict_avg(train_loss_meters)}')
-
-                    # Log loss and lr by iteration
-                    writer.add_scalar("Train/loss-iter/avg", loss.item(), iteration)
-                    writer.add_scalar("Train/lr-iter", optimizer.param_groups[0]['lr'], iteration)
+                    log_dict = {
+                        "Train/times/io_per_thread": io_times.mean().item(),
+                        "Train/times/data_processing_per_thread": processing_times.mean().item(),
+                        "Train/times/dataloader_time": dataloader_time,
+                        "Train/times/move_cuda": move_cuda_time,
+                        "Train/times/forward": forward_time,
+                        "Train/times/backward": backward_time,
+                        # Memory
+                        "Train/ram-system-used": get_system_ram_usage(),
+                        "Train/ram-process-used": get_process_ram_usage(),
+                        # Loss and lr by iteration
+                        "Train/loss-iter/avg": loss.item(),
+                        "Train/lr-iter": optimizer.param_groups[0]['lr'],
+                        "iteration": iteration,
+                    }
                     if grad_norm is not None:
-                        writer.add_scalar("Train/grad_norm-iter", grad_norm, iteration)
+                        log_dict["Train/grad_norm-iter"] = grad_norm
+                    wandb.log(log_dict)
 
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
@@ -263,11 +274,12 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
         del train_dataloader
 
-        # Log training loss to TensorBoard
-        for robot_name, meter in train_loss_meters.items():
-            writer.add_scalar(f"Train/loss/{robot_name}", meter.avg, epoch + 1)
-        writer.add_scalar("Train/loss/avg", get_meter_dict_avg(train_loss_meters), epoch + 1)
-        writer.add_scalar("Train/lr", optimizer.param_groups[0]['lr'], epoch + 1)
+        # Log training loss to wandb
+        train_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
+        train_log_dict["Train/loss/avg"] = get_meter_dict_avg(train_loss_meters)
+        train_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
+        train_log_dict["epoch"] = epoch + 1
+        wandb.log(train_log_dict)
 
         # Validation phase
         policy.eval()
@@ -305,10 +317,11 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     if index > 0.03 * len(val_dataloader):
                         break
 
-        # Log validation loss to TensorBoard
-        for robot_name, meter in val_loss_meters.items():
-            writer.add_scalar(f"Val/loss/{robot_name}", meter.avg, epoch + 1)
-        writer.add_scalar("Val/loss/avg", get_meter_dict_avg(val_loss_meters), epoch + 1)
+        # Log validation loss to wandb
+        val_log_dict = {f"Val/loss/{robot_name}": meter.avg for robot_name, meter in val_loss_meters.items()}
+        val_log_dict["Val/loss/avg"] = get_meter_dict_avg(val_loss_meters)
+        val_log_dict["epoch"] = epoch + 1
+        wandb.log(val_log_dict)
 
         del val_dataloader
         if epoch == 0:
@@ -353,10 +366,11 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         if index > 0.03 * len(test_dataloader):
                             break
 
-            # Log validation loss to TensorBoard
-            for robot_name, meter in test_loss_meters.items():
-                writer.add_scalar(f"Test/loss/{robot_name}", meter.avg, epoch + 1)
-            writer.add_scalar("Test/loss/avg", get_meter_dict_avg(test_loss_meters), epoch + 1)
+            # Log test loss to wandb
+            test_log_dict = {f"Test/loss/{robot_name}": meter.avg for robot_name, meter in test_loss_meters.items()}
+            test_log_dict["Test/loss/avg"] = get_meter_dict_avg(test_loss_meters)
+            test_log_dict["epoch"] = epoch + 1
+            wandb.log(test_log_dict)
 
             del test_dataloader
 
@@ -373,10 +387,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
               f"Val Loss: {get_meter_dict_avg(val_loss_meters):.6f}, Best Val Loss: {best_val_loss:.6f}, "
               f"Test Loss: {get_meter_dict_avg(test_loss_meters):.6f}")
 
-    writer.close()
     if wandb.run is not None:
         wandb.finish()
-    print("[INFO] Training completed. TensorBoard logs saved.")
+    print("[INFO] Training completed. Wandb logs saved.")
 
 
 def main():
@@ -391,17 +404,16 @@ def main():
     save_args_to_yaml(args_cli, config_save_path)
     print(f"[INFO] Config saved to {config_save_path}")
 
-    # Initialize wandb with tensorboard sync
+    # Initialize wandb
     if args_cli.wandb:
         wandb.init(
             project=args_cli.wandb_project,
             entity=args_cli.wandb_entity,
             name=args_cli.wandb_name or args_cli.exp_name,
             config=vars(args_cli),
-            sync_tensorboard=True,
             dir=log_dir
         )
-        print(f"[INFO] Wandb initialized with tensorboard sync")
+        print(f"[INFO] Wandb initialized")
 
     # Dataset paths
     assert args_cli.train_set is not None, f"Please specify value for arg --train_set"

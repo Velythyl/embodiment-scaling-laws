@@ -34,7 +34,7 @@ setup:
   - 'mkdir -p "/tmp/embodiment-scaling-laws/logs"'
   #- 'cp -r /network/scratch/c/charlie.gauthier/embodiment-scaling-laws /tmp/esl'
   - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl\""
-  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P32 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl"'
+  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P64 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl"'
   - 'ln -s  $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl /tmp/embodiment-scaling-laws/logs/rsl_rl'
   - '[ -L /tmp/embodiment-scaling-laws/logs/rsl_rl ] || { echo "ERROR: symlink creation failed"; exit 1; }'
   - 'ls /tmp/embodiment-scaling-laws/logs/rsl_rl | head -10'

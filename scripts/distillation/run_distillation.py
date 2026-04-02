@@ -13,6 +13,11 @@ import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # for urma_model
 sys.path.append("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts")
+try:
+    if os.path.exists("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"):
+        os.chdir("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts")
+except Exception as e:
+    print(f"[ERROR] Failed to change directory: {e}")
 from utility_functions import (get_most_recent_h5py_record_path, save_checkpoint, AverageMeter,
                    save_args_to_yaml, compute_gradient_norm, get_process_ram_usage, get_system_ram_usage)
 from dataset_functions import LocomotionDataset

@@ -192,6 +192,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         )
 
         with tqdm.tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
+            train_phase_start_time = time.time()
             iteration_start_time = time.time()
             for index, (batch_inputs, batch_targets, data_source_name, io_times, processing_times) in enumerate(pbar):
                 iteration = index + epoch * len(train_dataloader)
@@ -199,6 +200,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                 # Move data to device
                 start_time = time.time()
+                batch_inputs = tuple(x.cuda(non_blocking=True) for x in batch_inputs)
+                batch_targets = batch_targets.cuda(non_blocking=True)
                 move_cuda_time = time.time() - start_time
 
                 start_time = time.time()
@@ -275,7 +278,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         log_dict["Train/grad_norm-iter"] = grad_norm
                     wandb.log(log_dict)
                     pct = 100.0 * (index + 1) / len(train_dataloader)
-                    print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f}")
+                    train_bps = (index + 1) / (time.time() - train_phase_start_time)
+                    print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
 
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
@@ -291,7 +295,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         train_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
         train_log_dict["epoch"] = epoch + 1
         wandb.log(train_log_dict)
-        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train complete | Avg Loss: {get_meter_dict_avg(train_loss_meters):.4f}")
+        train_total_bps = len(train_dataloader) / (time.time() - train_phase_start_time)
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train complete | Avg Loss: {get_meter_dict_avg(train_loss_meters):.4f} | {train_total_bps:.2f} batch/s")
 
         # Validation phase
         policy.eval()
@@ -304,8 +309,11 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         )
 
         with torch.no_grad():
+            val_phase_start_time = time.time()
             with tqdm.tqdm(val_dataloader, desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                 for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
+                    batch_inputs = tuple(x.cuda(non_blocking=True) for x in batch_inputs)
+                    batch_targets = batch_targets.cuda(non_blocking=True)
 
                     if model in ['urma']:
                         batch_predictions = policy(*batch_inputs)
@@ -334,7 +342,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         val_log_dict["Val/loss/avg"] = get_meter_dict_avg(val_loss_meters)
         val_log_dict["epoch"] = epoch + 1
         wandb.log(val_log_dict)
-        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {get_meter_dict_avg(val_loss_meters):.4f}")
+        val_total_bps = (index + 1) / (time.time() - val_phase_start_time)
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {get_meter_dict_avg(val_loss_meters):.4f} | {val_total_bps:.2f} batch/s")
 
         del val_dataloader
         if epoch == 0:
@@ -351,6 +360,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             )
 
             with torch.no_grad():
+                test_phase_start_time = time.time()
                 with tqdm.tqdm(test_dataloader, desc=f"Test Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                     for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
                         # Move data to device
@@ -384,7 +394,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             test_log_dict["Test/loss/avg"] = get_meter_dict_avg(test_loss_meters)
             test_log_dict["epoch"] = epoch + 1
             wandb.log(test_log_dict)
-            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {get_meter_dict_avg(test_loss_meters):.4f}")
+            test_total_bps = (index + 1) / (time.time() - test_phase_start_time)
+            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {get_meter_dict_avg(test_loss_meters):.4f} | {test_total_bps:.2f} batch/s")
 
             del test_dataloader
 

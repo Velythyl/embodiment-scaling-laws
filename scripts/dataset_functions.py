@@ -374,45 +374,40 @@ class LocomotionDataset(Dataset):
                             f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
                         )
             
-            print(f"[INFO]: Limb bbox injection ENABLED - extra_des_dim={self.extra_des_dim}")
+            # Pre-compute per-robot bbox arrays keyed by robot_name.
+            # This avoids rebuilding tensors from Python dicts on every batch.
+            # Shape: (nr_dynamic_joint_observations, extra_des_dim) as a float32 np.ndarray.
+            self.robot_bbox_np_cache = {}
+            for folder_idx, robot_name in self.folder_idx_to_file_name.items():
+                if robot_name in self.robot_bbox_np_cache:
+                    continue
+                desc = self.robot_desc_cache[robot_name]
+                nr_joints = self.metadata_list[folder_idx]["nr_dynamic_joint_observations"]
+                all_joint_names = list(desc['joint_info'].keys())
+                joint_names = all_joint_names[:nr_joints]
+                rows = []
+                for joint_name in joint_names:
+                    child_link = desc['joint_to_child_link'][joint_name]
+                    rows.append(np.array(desc['link_info'][child_link]['bbox']).flatten())
+                self.robot_bbox_np_cache[robot_name] = np.stack(rows).astype(np.float32)
+
+            print(f"[INFO]: Limb bbox injection ENABLED - extra_des_dim={self.extra_des_dim}, "
+                  f"pre-cached bbox arrays for {len(self.robot_bbox_np_cache)} robots")
         else:
+            self.robot_bbox_np_cache = {}
             print(f"[INFO]: Limb bbox injection DISABLED - descriptions do not contain bbox data")
 
     def _get_limb_bbox_for_batch(self, robot_name: str, joint_names: list) -> torch.Tensor:
         """Get limb bboxes for all joints in a robot.
-        
-        Returns tensor of shape (nr_joints, extra_des_dim). Default is 6: [min_x, min_y, min_z, max_x, max_y, max_z].
-        Custom description files can have different dimensions.
+
+        Returns CPU tensor of shape (nr_joints, extra_des_dim).
+        Uses pre-computed numpy cache built in _preload_robot_descriptions for zero
+        per-batch Python overhead (torch.from_numpy is a zero-copy view).
         """
-        desc = self.robot_desc_cache.get(robot_name)
-        if desc is None or 'link_info' not in desc or 'joint_to_child_link' not in desc:
-            # Return zeros if robot description not available or missing required fields
+        cached = self.robot_bbox_np_cache.get(robot_name)
+        if cached is None:
             return torch.zeros((len(joint_names), self.extra_des_dim), dtype=torch.float32)
-        
-        joint_to_child = desc['joint_to_child_link']
-        link_info = desc['link_info']
-        
-        limb_bboxes = []
-        for joint_name in joint_names:
-            child_link = joint_to_child.get(joint_name)
-            if not child_link:
-                raise ValueError(
-                    f"Joint '{joint_name}' not found in joint_to_child_link mapping for robot '{robot_name}'. "
-                    f"Please regenerate robot_description_vec.json with: "
-                    f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
-                )
-            if child_link not in link_info:
-                raise ValueError(
-                    f"Child link '{child_link}' (from joint '{joint_name}') not found in link_info for robot '{robot_name}'. "
-                    f"Please regenerate robot_description_vec.json with: "
-                    f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
-                )
-            bbox = link_info[child_link]['bbox']
-            # Flatten any nested structure (e.g., [[min], [max]] or [data1, data2, ...])
-            flat_bbox = np.array(bbox).flatten().tolist()
-            limb_bboxes.append(flat_bbox)
-        
-        return torch.tensor(limb_bboxes, dtype=torch.float32)
+        return torch.from_numpy(cached)
 
     def _prepare_file_indices(self):
         """
@@ -578,10 +573,10 @@ class LocomotionDataset(Dataset):
 
         batch_size = len(target_samples)
 
-        # We want to shift all computation to GPU since many clusters are GPU computation-optimized
-        # but note that only on the main thread (num_workers=0) can we do cuda here
-        state = torch.from_numpy(np.stack(input_samples, axis=0)).to(dtype=torch.float32).cuda()  # Shape: (320,)
-        target = torch.from_numpy(np.stack(target_samples, axis=0)).to(dtype=torch.float32).cuda()  # Shape: (12,)
+        # Returns CPU tensors; the training loop moves them to CUDA. This is required
+        # for safe use with num_workers > 0 (CUDA cannot be initialised in worker processes).
+        state = torch.from_numpy(np.stack(input_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, D)
+        target = torch.from_numpy(np.stack(target_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, A)
 
         # Dynamic Joint Data Transformation
         dynamic_joint_observation_length = metadata["dynamic_joint_observation_length"]
@@ -613,7 +608,7 @@ class LocomotionDataset(Dataset):
                 
                 joint_names = all_joint_names[:nr_dynamic_joint_observations]
                 limb_bboxes = self._get_limb_bbox_for_batch(robot_name, joint_names)
-                limb_bboxes = limb_bboxes.unsqueeze(0).expand(batch_size, -1, -1).cuda()
+                limb_bboxes = limb_bboxes.unsqueeze(0).expand(batch_size, -1, -1)  # CPU; moves to CUDA in training loop
                 
                 # Note: limb bboxes are NOT normalized (raw values in meters)
                 # This differs from foot_size in locomotion_env.py which is normalized.
@@ -812,21 +807,29 @@ class LocomotionDataset(Dataset):
             num_workers = min(num_workers, len(self.file_indices))        # 2 is a safe number, tested
 
         if num_workers > 0:
-            warnings.warn(f"You are using num_workers > 0, which might cause memory increasing throughput "
-                          f"the training process due to caching and multi-processing."
-                          f"It is recommended to set num_workers to 0. ")
-            time.sleep(3)
+            print(f"[INFO]: Using num_workers={num_workers}. "
+                  f"num_workers=1 keeps cache RAM identical to num_workers=0 (one worker, one cache). "
+                  f"num_workers>1 multiplies cache RAM by num_workers. "
+                  f"Each worker maintains its own h5py handles and file cache (max_files={self.max_files_in_memory}).")
 
-        assert num_workers == 0 and self.max_files_in_memory > 0,\
-            f"it is recommended that num_workers = 0, but max_files_in_memory > 0"
+        assert self.max_files_in_memory > 0, "max_files_in_memory must be > 0"
 
         self._prepare_file_indices()  # re-sample the dataset
 
+        # When using real workers, distribute batches across num_workers slots so each worker
+        # stays on its own subset of files and the per-worker cache stays hot.
+        # When num_workers=0 the main process handles everything; use max_files_in_memory as
+        # the virtual-worker count so the cache-friendly access pattern is preserved.
+        n_batch_slots = num_workers if num_workers > 0 else self.max_files_in_memory
+
         return DataLoader(
             self,
-            batch_sampler=self.get_batch_indices(batch_size, shuffle, self.max_files_in_memory),
+            batch_sampler=self.get_batch_indices(batch_size, shuffle, n_batch_slots),
             collate_fn=self.collate_fn,
             num_workers=num_workers,
-            pin_memory=False,
+            pin_memory=(num_workers > 0),   # pin_memory speeds up CPU->GPU transfers when using workers
+            # NOTE: persistent_workers is intentionally False — a new DataLoader is created each
+            # epoch so workers are destroyed anyway; setting True here can cause stale-state bugs.
+            persistent_workers=False,
             # **kwargs
         )

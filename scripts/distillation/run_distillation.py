@@ -615,6 +615,29 @@ def hydra_main(cfg: DictConfig):
     
     Extracts argparse arguments from cfg.argparse and calls main().
     """
+    # If HYDRA_SPOOF is set, we're in a submitit-unpickled process where sys.path
+    # is wrong. Re-launch ourselves as a fresh subprocess from the correct directory.
+    spoof_dir = os.environ.pop("HYDRA_SPOOF", None)
+    if spoof_dir:
+        import subprocess
+        from hydra.core.hydra_config import HydraConfig
+
+        hc = HydraConfig.get()
+        overrides = list(hc.overrides.task)
+        config_name = hc.job.config_name
+
+        activate = os.path.normpath(os.path.join(spoof_dir, "..", "env_isaaclab", "bin", "activate"))
+        script = os.path.join("distillation", "run_distillation.py")
+        cmd_parts = ["python", script, "--config-name", config_name] + overrides
+        bash_cmd = f"source {shlex.quote(activate)} && cd {shlex.quote(spoof_dir)} && {shlex.join(cmd_parts)}"
+
+        print(f"[INFO] HYDRA_SPOOF active, re-launching from {spoof_dir}")
+        print(f"[INFO] bash -c {bash_cmd}")
+        sys.stdout.flush()
+
+        result = subprocess.run(["bash", "-c", bash_cmd], cwd=spoof_dir)
+        sys.exit(result.returncode)
+
     sys.argv = [sys.argv[0]] + shlex.split(cfg.argparse + " " + cfg.append_argparse)
     try:
         print("[INFO] hydra_main: Calling main()...")

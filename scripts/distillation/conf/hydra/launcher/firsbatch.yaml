@@ -43,7 +43,8 @@ setup:
   #  find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 |
   #  xargs -0 -P16 -I% bash -c 'd=$(basename "$1") && mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" && tar -C "$1" -cf - . | tar -C "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" -xpf -' _ %
   - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Done syncing training data\""
-  - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-lawsz/env_isaaclab/bin/activate"
+  - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/env_isaaclab/bin/activate"
+  - 'export HYDRA_SPOOF="/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"'
   - "sleep $((RANDOM % 100))"
   - "echo Starting Training Now..."
   - "cd /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"

@@ -25,6 +25,7 @@ import tqdm
 import argparse
 import yaml
 from urma_model.policy_3head_scale2 import get_policy
+print("Loaded URMA initially without error")
 
 def set_seed(seed):
     random.seed(seed)  # Set Python's random seed

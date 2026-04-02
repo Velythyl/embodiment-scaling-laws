@@ -5,6 +5,7 @@
 import argparse
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # for urma_model
 import cli_args
 
 from omni.isaac.lab.app import AppLauncher

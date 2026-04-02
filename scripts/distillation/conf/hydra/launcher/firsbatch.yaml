@@ -14,7 +14,7 @@ nodes: 1
 name: ${hydra.job.name}
 array_parallelism: 999 # max num of tasks to run in parallel (via job array)
 additional_parameters:
-  exclude: "fc10606" #fc10901,fc10713"
+  exclude: "fc11001,fc10606" #fc10901,fc10713"
 setup:
   - "export WANDB_DIR=${hydra.sweep.dir}"
   - "export HYDRA_SWEEP_DIR=${hydra.sweep.dir}"

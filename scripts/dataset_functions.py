@@ -1,7 +1,6 @@
 import os
 import random
 import time
-import concurrent.futures
 import h5py
 import numpy as np
 import torch
@@ -200,13 +199,6 @@ class LocomotionDataset(Dataset):
         # global global_cache    # we must use global reference, otherwise every thread will spawn its own cache
         self.cache = ThreadSafeDict(max_size=max_files_in_memory)
         # self.cache = ThreadSafeSingleEntryDict(max_size=max_files_in_memory)
-
-        # Prefetch: on a cache miss we immediately start loading the next file
-        # in a background thread so it's ready before the current file is exhausted.
-        self._prefetch_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        self._prefetch_future = None   # Future for the file currently being prefetched
-        self._prefetch_key = None      # cache key of the file being prefetched
-        self._next_file_map = {}       # file_key -> next_file_key (built per-epoch)
 
         # Map file indices and prepare dataset structure
         self._prepare_file_indices()
@@ -523,35 +515,8 @@ class LocomotionDataset(Dataset):
         cached_file = self.cache.get(cache_key)
         if cached_file is None:
             # print(f"can't find cached file for {cache_key}, only got {self.cache.keys()}")
-
-            # Check if a background prefetch already loaded this file
-            if self._prefetch_key == cache_key and self._prefetch_future is not None:
-                try:
-                    inputs, targets = self._prefetch_future.result()
-                except Exception:
-                    # Prefetch failed (e.g. file disappeared); load synchronously
-                    inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
-                self._prefetch_future = None
-                self._prefetch_key = None
-            else:
-                # Cancel any stale prefetch that we won't use
-                if self._prefetch_future is not None:
-                    self._prefetch_future.cancel()
-                    self._prefetch_future = None
-                    self._prefetch_key = None
-                inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
-
+            inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
             self.cache.put(cache_key, (inputs, targets))
-
-            # Kick off background prefetch for the next file this worker will need
-            next_key = self._next_file_map.get(cache_key)
-            if next_key is not None and self.cache.get(next_key) is None:
-                nf, nfi, nesi = next_key
-                self._prefetch_key = next_key
-                self._prefetch_future = self._prefetch_executor.submit(
-                    self._load_file, nf, nfi, nesi
-                )
-
             return inputs, targets
             # self.cache_hit_count.update(0, 1)
         # else:
@@ -578,6 +543,8 @@ class LocomotionDataset(Dataset):
         start_time = time.time()
         inputs, targets = self._cache_file(folder_idx, file_idx, env_start_idx)
         io_time = time.time() - start_time
+        if io_time > 5.0:
+            print(f"[SLOW-IO] __getitem__ file load took {io_time:.1f}s for folder={folder_idx} file={file_idx}", flush=True)
 
         # Retrieve specific sample within the file
         input_sample = inputs[step, env]
@@ -608,8 +575,8 @@ class LocomotionDataset(Dataset):
 
         batch_size = len(target_samples)
 
-        # Returns CPU tensors; the training loop moves them to CUDA. This is required
-        # for safe use with num_workers > 0 (CUDA cannot be initialised in worker processes).
+        # Keep tensors on CPU here so that collate_fn works in both num_workers=0 and num_workers>0.
+        # The training loop is responsible for moving to CUDA.
         state = torch.from_numpy(np.stack(input_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, D)
         target = torch.from_numpy(np.stack(target_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, A)
 
@@ -705,6 +672,8 @@ class LocomotionDataset(Dataset):
         transformed_sample = self._transform_samples(inputs, targets, metadata_list, robot_name=robot_names[0])
         inputs, targets = transformed_sample[:-1], transformed_sample[-1]
         processing_times = time.time() - st
+        if processing_times > 5.0:
+            print(f"[SLOW-COLLATE] _transform_samples took {processing_times:.1f}s for {robot_names[0]}, batch_size={len(batch)}", flush=True)
 
         # # Transpose the inputs to group by component
         # inputs_by_component = zip(*inputs)  # Converts list of tuples into tuples of components
@@ -775,11 +744,9 @@ class LocomotionDataset(Dataset):
         # each list from one file
         # also record the mapping between worker and file keys
         file_sample_lists_per_worker = [[] for _ in range(num_workers)]
-        file_keys_per_worker = [[] for _ in range(num_workers)]  # track key order per worker for prefetch
         self.worker_idx_to_folder_file_idx = {worker_idx: set() for worker_idx in range(num_workers)}
         for i, key in enumerate(file_keys):
             file_sample_lists_per_worker[i % num_workers].append(file_samples[key])
-            file_keys_per_worker[i % num_workers].append(key)
             self.worker_idx_to_folder_file_idx[i % num_workers].add(key)
 
         # assert 0 not in [len(x) for x in file_sample_lists_per_worker], \
@@ -799,13 +766,6 @@ class LocomotionDataset(Dataset):
                 duplicates += len(sampled_file_samples)     # record number of duplicates for logging
             file_sample_lists_per_worker[worker_idx] = worker_samples
 
-        # Build prefetch map: for each file key, record the next file key that worker will need.
-        # This lets _cache_file() start loading the next file in the background.
-        self._next_file_map = {}
-        for worker_keys in file_keys_per_worker:
-            for i in range(len(worker_keys) - 1):
-                self._next_file_map[worker_keys[i]] = worker_keys[i + 1]
-
         # flatten the inner 2-layer nested lists into one 1-layer list
         samples_per_worker = [list(chain(*worker_sample_lists)) for worker_sample_lists in file_sample_lists_per_worker]
         assert all(len(samples) == len(samples_per_worker[0]) for samples in samples_per_worker), \
@@ -820,8 +780,11 @@ class LocomotionDataset(Dataset):
             for worker_idx, samples in enumerate(samples_per_worker):
                 cycle_samples.append(samples[i])
             
-            # shuffle the samples in one cycle, if desirable
-            random.shuffle(cycle_samples)
+            # Only shuffle within a cycle when num_workers <= 1 (single-process mode).
+            # With actual DataLoader workers, PyTorch assigns batches round-robin by position,
+            # so shuffling here destroys worker↔lane alignment and causes cache misses.
+            if shuffle and num_workers <= 1:
+                random.shuffle(cycle_samples)
 
             final_samples.extend(cycle_samples)
 
@@ -850,31 +813,42 @@ class LocomotionDataset(Dataset):
              f"I will set num_workers to {min(num_workers, len(self.file_indices))}")
             num_workers = min(num_workers, len(self.file_indices))        # 2 is a safe number, tested
 
-        if num_workers > 0:
-            print(f"[INFO]: Using num_workers={num_workers}. "
-                  f"num_workers=1 keeps cache RAM identical to num_workers=0 (one worker, one cache). "
-                  f"num_workers>1 multiplies cache RAM by num_workers. "
-                  f"Each worker maintains its own h5py handles and file cache (max_files={self.max_files_in_memory}).")
+        if num_workers > 1:
+            warnings.warn(f"You are using num_workers > 1. Each worker's cache will be set to "
+                          f"max_files_in_memory // num_workers = {self.max_files_in_memory // num_workers}. "
+                          f"This might cause increased memory usage due to multi-processing.")
 
-        assert self.max_files_in_memory > 0, "max_files_in_memory must be > 0"
+        assert self.max_files_in_memory > 0, \
+            f"max_files_in_memory must be > 0, got {self.max_files_in_memory}"
 
         self._prepare_file_indices()  # re-sample the dataset
 
-        # When using real workers, distribute batches across num_workers slots so each worker
-        # stays on its own subset of files and the per-worker cache stays hot.
-        # When num_workers=0 the main process handles everything; use max_files_in_memory as
-        # the virtual-worker count so the cache-friendly access pattern is preserved.
-        n_batch_slots = num_workers if num_workers > 0 else self.max_files_in_memory
+        # When num_workers <= 1, interleave across max_files_in_memory virtual lanes (original behavior).
+        # When num_workers > 1, interleave across actual workers so each real worker gets
+        # consecutive batches from the same file, preserving cache locality.
+        interleave_factor = self.max_files_in_memory if num_workers <= 1 else num_workers
+        batch_indices = self.get_batch_indices(batch_size, shuffle, interleave_factor)
+        print(f"[DATALOADER] Creating DataLoader: num_workers={num_workers}, "
+              f"batch_size={batch_size}, num_batches={len(batch_indices)}, "
+              f"max_files_in_memory={self.max_files_in_memory}, "
+              f"interleave_factor={interleave_factor}, "
+              f"num_files={len(self.file_indices)}", flush=True)
+
+        # When num_workers > 1, each worker gets a fraction of the cache.
+        # We use worker_init_fn to resize each worker's cache after fork.
+        def _worker_init_fn(worker_id):
+            dataset = torch.utils.data.get_worker_info().dataset
+            per_worker_cache_size = max(1, dataset.max_files_in_memory // num_workers)
+            dataset.cache = ThreadSafeDict(max_size=per_worker_cache_size)
+            print(f"[DATALOADER] Worker {worker_id} initialized with cache_size={per_worker_cache_size}", flush=True)
 
         return DataLoader(
             self,
-            batch_sampler=self.get_batch_indices(batch_size, shuffle, n_batch_slots),
+            batch_sampler=batch_indices,
             collate_fn=self.collate_fn,
             num_workers=num_workers,
-            pin_memory=(num_workers > 0),   # pin_memory speeds up CPU->GPU transfers when using workers
-            # NOTE: persistent_workers is intentionally False — a new DataLoader is created each
-            # epoch so workers are destroyed anyway; setting True here can cause stale-state bugs.
-            persistent_workers=False,
-            prefetch_factor=4 if num_workers > 0 else None,
+            pin_memory=False,
+            worker_init_fn=_worker_init_fn if num_workers > 1 else None,
+            prefetch_factor=16
             # **kwargs
         )

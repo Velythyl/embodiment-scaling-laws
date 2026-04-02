@@ -179,9 +179,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
     print("[INFO] Starting supervised training.")
     for epoch in range(start_epoch, num_epochs):
         # clean up memory
-        _gc_start = time.time()
         gc.collect()
-        print(f"[DEBUG-TIMING] gc.collect() took {time.time() - _gc_start:.2f}s")
 
         # Training phase
         policy.train()
@@ -193,23 +191,23 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         train_dataloader = train_dataset.get_data_loader(
             batch_size=batch_size, shuffle=True, num_workers=num_workers
         )
-        print(f"[DEBUG-TIMING] Dataloader creation took {time.time() - _dl_create_start:.2f}s")
+        print(f"[TIMING] DataLoader creation took {time.time() - _dl_create_start:.1f}s", flush=True)
 
         with tqdm.tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
             train_phase_start_time = time.time()
             iteration_start_time = time.time()
+            _batch_fetch_start = time.time()
             for index, (batch_inputs, batch_targets, data_source_name, io_times, processing_times) in enumerate(pbar):
+                _batch_fetch_time = time.time() - _batch_fetch_start
+                if _batch_fetch_time > 10.0:
+                    print(f"[STALL] Batch {index} took {_batch_fetch_time:.1f}s to fetch from dataloader", flush=True)
                 iteration = index + epoch * len(train_dataloader)
                 dataloader_time = time.time() - iteration_start_time
-                if dataloader_time > 2.0:
-                    print(f"[DEBUG-STALL] Batch {index} fetch took {dataloader_time:.2f}s! "
-                          f"robot={data_source_name}, io_per_thread={io_times.mean().item():.3f}s, "
-                          f"processing={processing_times.mean().item():.3f}s")
 
                 # Move data to device
                 start_time = time.time()
-                batch_inputs = tuple(x.cuda(non_blocking=True) for x in batch_inputs)
-                batch_targets = batch_targets.cuda(non_blocking=True)
+                batch_inputs = tuple(x.to(model_device) for x in batch_inputs)
+                batch_targets = batch_targets.to(model_device)
                 move_cuda_time = time.time() - start_time
 
                 start_time = time.time()
@@ -294,10 +292,10 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     scheduler.step(iteration)
 
                 iteration_start_time = time.time()  # start time of next iteration
+                _batch_fetch_start = time.time()
 
         _del_start = time.time()
         del train_dataloader
-        print(f"[DEBUG-TIMING] del train_dataloader took {time.time() - _del_start:.2f}s")
 
         # Log training loss to wandb
         train_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
@@ -322,8 +320,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             val_phase_start_time = time.time()
             with tqdm.tqdm(val_dataloader, desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                 for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
-                    batch_inputs = tuple(x.cuda(non_blocking=True) for x in batch_inputs)
-                    batch_targets = batch_targets.cuda(non_blocking=True)
+                    batch_inputs = tuple(x.to(model_device) for x in batch_inputs)
+                    batch_targets = batch_targets.to(model_device)
 
                     if model in ['urma']:
                         batch_predictions = policy(*batch_inputs)

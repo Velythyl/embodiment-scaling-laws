@@ -274,6 +274,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     if grad_norm is not None:
                         log_dict["Train/grad_norm-iter"] = grad_norm
                     wandb.log(log_dict)
+                    pct = 100.0 * (index + 1) / len(train_dataloader)
+                    print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f}")
 
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
@@ -289,6 +291,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         train_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
         train_log_dict["epoch"] = epoch + 1
         wandb.log(train_log_dict)
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train complete | Avg Loss: {get_meter_dict_avg(train_loss_meters):.4f}")
 
         # Validation phase
         policy.eval()
@@ -331,6 +334,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         val_log_dict["Val/loss/avg"] = get_meter_dict_avg(val_loss_meters)
         val_log_dict["epoch"] = epoch + 1
         wandb.log(val_log_dict)
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {get_meter_dict_avg(val_loss_meters):.4f}")
 
         del val_dataloader
         if epoch == 0:
@@ -380,6 +384,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             test_log_dict["Test/loss/avg"] = get_meter_dict_avg(test_loss_meters)
             test_log_dict["epoch"] = epoch + 1
             wandb.log(test_log_dict)
+            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {get_meter_dict_avg(test_loss_meters):.4f}")
 
             del test_dataloader
 

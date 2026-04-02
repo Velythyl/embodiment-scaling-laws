@@ -849,6 +849,6 @@ class LocomotionDataset(Dataset):
             num_workers=num_workers,
             pin_memory=False,
             worker_init_fn=_worker_init_fn if num_workers > 1 else None,
-            prefetch_factor=16
+            prefetch_factor=4
             # **kwargs
         )

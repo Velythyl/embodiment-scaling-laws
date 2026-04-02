@@ -46,7 +46,7 @@ setup:
   - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-lawsz/env_isaaclab/bin/activate"
   - "sleep $((RANDOM % 100))"
   - "echo Starting Training Now..."
-  - "cd /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts
+  - "cd /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"
 
 # module load cuda/12.1.1/cudnn
 # module load python/3.10

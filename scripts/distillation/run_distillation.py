@@ -18,6 +18,7 @@ from dataset_functions import LocomotionDataset
 import tqdm
 import argparse
 import yaml
+from urma_model.policy_3head_scale2 import get_policy
 
 def set_seed(seed):
     random.seed(seed)  # Set Python's random seed

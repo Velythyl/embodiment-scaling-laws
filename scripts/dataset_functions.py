@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import concurrent.futures
 import h5py
 import numpy as np
 import torch
@@ -199,6 +200,13 @@ class LocomotionDataset(Dataset):
         # global global_cache    # we must use global reference, otherwise every thread will spawn its own cache
         self.cache = ThreadSafeDict(max_size=max_files_in_memory)
         # self.cache = ThreadSafeSingleEntryDict(max_size=max_files_in_memory)
+
+        # Prefetch: on a cache miss we immediately start loading the next file
+        # in a background thread so it's ready before the current file is exhausted.
+        self._prefetch_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self._prefetch_future = None   # Future for the file currently being prefetched
+        self._prefetch_key = None      # cache key of the file being prefetched
+        self._next_file_map = {}       # file_key -> next_file_key (built per-epoch)
 
         # Map file indices and prepare dataset structure
         self._prepare_file_indices()
@@ -515,8 +523,35 @@ class LocomotionDataset(Dataset):
         cached_file = self.cache.get(cache_key)
         if cached_file is None:
             # print(f"can't find cached file for {cache_key}, only got {self.cache.keys()}")
-            inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
+
+            # Check if a background prefetch already loaded this file
+            if self._prefetch_key == cache_key and self._prefetch_future is not None:
+                try:
+                    inputs, targets = self._prefetch_future.result()
+                except Exception:
+                    # Prefetch failed (e.g. file disappeared); load synchronously
+                    inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
+                self._prefetch_future = None
+                self._prefetch_key = None
+            else:
+                # Cancel any stale prefetch that we won't use
+                if self._prefetch_future is not None:
+                    self._prefetch_future.cancel()
+                    self._prefetch_future = None
+                    self._prefetch_key = None
+                inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
+
             self.cache.put(cache_key, (inputs, targets))
+
+            # Kick off background prefetch for the next file this worker will need
+            next_key = self._next_file_map.get(cache_key)
+            if next_key is not None and self.cache.get(next_key) is None:
+                nf, nfi, nesi = next_key
+                self._prefetch_key = next_key
+                self._prefetch_future = self._prefetch_executor.submit(
+                    self._load_file, nf, nfi, nesi
+                )
+
             return inputs, targets
             # self.cache_hit_count.update(0, 1)
         # else:
@@ -740,9 +775,11 @@ class LocomotionDataset(Dataset):
         # each list from one file
         # also record the mapping between worker and file keys
         file_sample_lists_per_worker = [[] for _ in range(num_workers)]
+        file_keys_per_worker = [[] for _ in range(num_workers)]  # track key order per worker for prefetch
         self.worker_idx_to_folder_file_idx = {worker_idx: set() for worker_idx in range(num_workers)}
         for i, key in enumerate(file_keys):
             file_sample_lists_per_worker[i % num_workers].append(file_samples[key])
+            file_keys_per_worker[i % num_workers].append(key)
             self.worker_idx_to_folder_file_idx[i % num_workers].add(key)
 
         # assert 0 not in [len(x) for x in file_sample_lists_per_worker], \
@@ -761,6 +798,13 @@ class LocomotionDataset(Dataset):
                 worker_samples.append(sampled_file_samples)
                 duplicates += len(sampled_file_samples)     # record number of duplicates for logging
             file_sample_lists_per_worker[worker_idx] = worker_samples
+
+        # Build prefetch map: for each file key, record the next file key that worker will need.
+        # This lets _cache_file() start loading the next file in the background.
+        self._next_file_map = {}
+        for worker_keys in file_keys_per_worker:
+            for i in range(len(worker_keys) - 1):
+                self._next_file_map[worker_keys[i]] = worker_keys[i + 1]
 
         # flatten the inner 2-layer nested lists into one 1-layer list
         samples_per_worker = [list(chain(*worker_sample_lists)) for worker_sample_lists in file_sample_lists_per_worker]

@@ -831,5 +831,6 @@ class LocomotionDataset(Dataset):
             # NOTE: persistent_workers is intentionally False — a new DataLoader is created each
             # epoch so workers are destroyed anyway; setting True here can cause stale-state bugs.
             persistent_workers=False,
+            prefetch_factor=4 if num_workers > 0 else None,
             # **kwargs
         )

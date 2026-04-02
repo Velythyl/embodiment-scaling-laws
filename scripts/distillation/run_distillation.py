@@ -179,7 +179,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
     print("[INFO] Starting supervised training.")
     for epoch in range(start_epoch, num_epochs):
         # clean up memory
+        _gc_start = time.time()
         gc.collect()
+        print(f"[DEBUG-TIMING] gc.collect() took {time.time() - _gc_start:.2f}s")
 
         # Training phase
         policy.train()
@@ -187,9 +189,11 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             meter.reset()
         print(f"[INFO] Starting epoch {epoch + 1}/{num_epochs} - Training.")
 
+        _dl_create_start = time.time()
         train_dataloader = train_dataset.get_data_loader(
             batch_size=batch_size, shuffle=True, num_workers=num_workers
         )
+        print(f"[DEBUG-TIMING] Dataloader creation took {time.time() - _dl_create_start:.2f}s")
 
         with tqdm.tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
             train_phase_start_time = time.time()
@@ -197,6 +201,10 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             for index, (batch_inputs, batch_targets, data_source_name, io_times, processing_times) in enumerate(pbar):
                 iteration = index + epoch * len(train_dataloader)
                 dataloader_time = time.time() - iteration_start_time
+                if dataloader_time > 2.0:
+                    print(f"[DEBUG-STALL] Batch {index} fetch took {dataloader_time:.2f}s! "
+                          f"robot={data_source_name}, io_per_thread={io_times.mean().item():.3f}s, "
+                          f"processing={processing_times.mean().item():.3f}s")
 
                 # Move data to device
                 start_time = time.time()
@@ -287,7 +295,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                 iteration_start_time = time.time()  # start time of next iteration
 
+        _del_start = time.time()
         del train_dataloader
+        print(f"[DEBUG-TIMING] del train_dataloader took {time.time() - _del_start:.2f}s")
 
         # Log training loss to wandb
         train_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}

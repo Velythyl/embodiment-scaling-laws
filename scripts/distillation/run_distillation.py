@@ -311,7 +311,6 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Log times
                 # start_time = time.time()
                 if index % 100 == 0:
-                    epoch_completion = epoch + (index + 1) / len(train_dataloader)
                     log_dict = {
                         "Train/times/io_per_thread": io_times.mean().item(),
                         "Train/times/data_processing_per_thread": processing_times.mean().item(),
@@ -326,7 +325,6 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         "Train/loss-iter/avg": loss.item(),
                         "Train/lr-iter": optimizer.param_groups[0]['lr'],
                         "iteration": iteration,
-                        "epoch_completion": epoch_completion,
                     }
                     if grad_norm is not None:
                         log_dict["Train/grad_norm-iter"] = grad_norm
@@ -342,16 +340,15 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 iteration_start_time = time.time()  # start time of next iteration
                 _batch_fetch_start = time.time()
 
+        # Collect training metrics (logged together with val/test at end of epoch)
+        epoch_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
+        epoch_log_dict["Train/loss/avg"] = get_meter_dict_avg(train_loss_meters)
+        epoch_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
+        epoch_log_dict["epoch"] = epoch + 1
+        train_total_bps = len(train_dataloader) / (time.time() - train_phase_start_time)
+
         _del_start = time.time()
         del train_dataloader
-
-        # Log training loss to wandb
-        train_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
-        train_log_dict["Train/loss/avg"] = get_meter_dict_avg(train_loss_meters)
-        train_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
-        train_log_dict["epoch"] = epoch + 1
-        wandb.log(train_log_dict)
-        train_total_bps = len(train_dataloader) / (time.time() - train_phase_start_time)
         print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train complete | Avg Loss: {get_meter_dict_avg(train_loss_meters):.4f} | {train_total_bps:.2f} batch/s")
 
         # Validation phase
@@ -392,11 +389,10 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     if index > 0.03 * len(val_dataloader):
                         break
 
-        # Log validation loss to wandb
+        # Collect validation metrics
         val_log_dict = {f"Val/loss/{robot_name}": meter.avg for robot_name, meter in val_loss_meters.items()}
         val_log_dict["Val/loss/avg"] = get_meter_dict_avg(val_loss_meters)
-        val_log_dict["epoch"] = epoch + 1
-        wandb.log(val_log_dict)
+        epoch_log_dict.update(val_log_dict)
         val_total_bps = (index + 1) / (time.time() - val_phase_start_time)
         print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {get_meter_dict_avg(val_loss_meters):.4f} | {val_total_bps:.2f} batch/s")
 
@@ -442,15 +438,17 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         if index > 0.03 * len(test_dataloader):
                             break
 
-            # Log test loss to wandb
+            # Collect test metrics
             test_log_dict = {f"Test/loss/{robot_name}": meter.avg for robot_name, meter in test_loss_meters.items()}
             test_log_dict["Test/loss/avg"] = get_meter_dict_avg(test_loss_meters)
-            test_log_dict["epoch"] = epoch + 1
-            wandb.log(test_log_dict)
+            epoch_log_dict.update(test_log_dict)
             test_total_bps = (index + 1) / (time.time() - test_phase_start_time)
             print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {get_meter_dict_avg(test_loss_meters):.4f} | {test_total_bps:.2f} batch/s")
 
             del test_dataloader
+
+        # Log all metrics for this epoch in a single wandb.log call
+        wandb.log(epoch_log_dict)
 
         # Save checkpoints periodically
         if (epoch + 1) % checkpoint_interval == 0:

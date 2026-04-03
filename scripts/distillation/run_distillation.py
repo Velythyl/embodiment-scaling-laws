@@ -27,6 +27,54 @@ import yaml
 from urma_model.policy_3head_scale2 import get_policy
 print("Loaded URMA initially without error")
 
+class CudaPrefetcher:
+    """Prefetch batches to GPU using a separate CUDA stream.
+
+    Overlaps CPU→GPU data transfer with the previous iteration's compute,
+    hiding transfer latency behind forward/backward passes.
+    """
+
+    def __init__(self, loader, device):
+        self.loader = loader
+        self.device = device
+        self.stream = torch.cuda.Stream(device=device)
+        self._iter = None
+        self._next_batch = None
+        self._exhausted = False
+
+    def __iter__(self):
+        self._iter = iter(self.loader)
+        self._exhausted = False
+        self._prefetch()
+        return self
+
+    def _prefetch(self):
+        try:
+            batch = next(self._iter)
+            with torch.cuda.stream(self.stream):
+                batch_inputs, batch_targets, data_source_name, io_times, processing_times = batch
+                batch_inputs = tuple(x.to(self.device, non_blocking=True) for x in batch_inputs)
+                batch_targets = batch_targets.to(self.device, non_blocking=True)
+                self._next_batch = (batch_inputs, batch_targets, data_source_name, io_times, processing_times)
+        except StopIteration:
+            self._next_batch = None
+            self._exhausted = True
+
+    def __next__(self):
+        if self._exhausted:
+            raise StopIteration
+        # Wait for the prefetch transfer to complete before consuming the batch
+        torch.cuda.current_stream(self.device).wait_stream(self.stream)
+        batch = self._next_batch
+        if batch is None:
+            raise StopIteration
+        self._prefetch()  # start loading next batch while GPU processes current
+        return batch
+
+    def __len__(self):
+        return len(self.loader)
+
+
 def set_seed(seed):
     random.seed(seed)  # Set Python's random seed
     np.random.seed(seed)  # Set NumPy's random seed
@@ -193,7 +241,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         )
         print(f"[TIMING] DataLoader creation took {time.time() - _dl_create_start:.1f}s", flush=True)
 
-        with tqdm.tqdm(train_dataloader, desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
+        prefetcher = CudaPrefetcher(train_dataloader, model_device)
+        with tqdm.tqdm(prefetcher, total=len(train_dataloader), desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
             train_phase_start_time = time.time()
             iteration_start_time = time.time()
             _batch_fetch_start = time.time()
@@ -204,11 +253,8 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 iteration = index + epoch * len(train_dataloader)
                 dataloader_time = time.time() - iteration_start_time
 
-                # Move data to device
-                start_time = time.time()
-                batch_inputs = tuple(x.to(model_device) for x in batch_inputs)
-                batch_targets = batch_targets.to(model_device)
-                move_cuda_time = time.time() - start_time
+                # Data already on GPU via CudaPrefetcher (non-blocking H2D overlap)
+                move_cuda_time = 0.0
 
                 start_time = time.time()
                 with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=use_amp):
@@ -318,10 +364,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
         with torch.no_grad():
             val_phase_start_time = time.time()
-            with tqdm.tqdm(val_dataloader, desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
+            val_prefetcher = CudaPrefetcher(val_dataloader, model_device)
+            with tqdm.tqdm(val_prefetcher, total=len(val_dataloader), desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                 for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
-                    batch_inputs = tuple(x.to(model_device) for x in batch_inputs)
-                    batch_targets = batch_targets.to(model_device)
 
                     if model in ['urma']:
                         batch_predictions = policy(*batch_inputs)
@@ -369,11 +414,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
             with torch.no_grad():
                 test_phase_start_time = time.time()
-                with tqdm.tqdm(test_dataloader, desc=f"Test Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
+                test_prefetcher = CudaPrefetcher(test_dataloader, model_device)
+                with tqdm.tqdm(test_prefetcher, total=len(test_dataloader), desc=f"Test Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                     for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
-                        # Move data to device
-                        batch_inputs = [x.to(model_device) for x in batch_inputs]
-                        batch_targets = batch_targets.to(model_device)
 
                         if model in ['urma']:
                             batch_predictions = policy(*batch_inputs)
@@ -695,9 +738,16 @@ if __name__ == "__main__":
 ln -s /home/mila/c/charlie.gauthier/embodiment-scaling-laws/ /tmp
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml append_argparse="--max_files_in_memory 256"
 
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml append_argparse="--max_files_in_memory 256 --num_workers 1  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 --dataset_dir /home/mila/c/charlie.gauthier/embodiment-scaling-laws/logs/rsl_rl"
 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 hydra.launcher.partition=long 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=48 hydra.launcher.array_parallelism=300 hydra.launcher.partition=main append_argparse="--max_files_in_memory 256"
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300
+
+
+
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 append_argparse=" --num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 "
+
+
 
 """

@@ -7,12 +7,20 @@ import torch
 import yaml
 import json
 import warnings
+import concurrent.futures
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import TensorDataset
 from itertools import chain
 
 from thread_safe_dict import ThreadSafeDict, ThreadSafeSingleEntryDict
 from utility_functions import AverageMeter
+
+
+class _PreBatched:
+    """Sentinel wrapper indicating data has already been batched by __getitems__."""
+    __slots__ = ('data',)
+    def __init__(self, data):
+        self.data = data
 
 
 class DatasetSaver:
@@ -331,8 +339,9 @@ class LocomotionDataset(Dataset):
                 with open(json_path, 'r') as f:
                     desc = json.load(f)
                 
-                # Check if this description has limb bbox data
-                robot_has_bbox = 'link_info' in desc and 'joint_to_child_link' in desc
+                # Check if this description has limb bbox data (bbox inside joint_info entries)
+                first_joint = next(iter(desc.get('joint_info', {}).values()), None)
+                robot_has_bbox = first_joint is not None and 'bbox' in first_joint
                 
                 if has_bbox_data is None:
                     has_bbox_data = robot_has_bbox
@@ -352,24 +361,23 @@ class LocomotionDataset(Dataset):
         # Determine extra description dimension by sampling actual data
         self.extra_des_dim = 0
         if self.use_limb_bboxes and self.robot_desc_cache:
-            # Sample one robot to determine the bbox dimension
+            # Sample one bbox to determine dimension
             sample_robot = next(iter(self.robot_desc_cache.keys()))
             sample_desc = self.robot_desc_cache[sample_robot]
-            sample_link = next(iter(sample_desc['link_info'].keys()))
-            sample_bbox = sample_desc['link_info'][sample_link]['bbox']
+            first_joint_data = next(iter(sample_desc['joint_info'].values()))
+            sample_bbox = first_joint_data['bbox']
             # Flatten any nested structure (e.g., [[min], [max]] or [data1, data2, ...])
             self.extra_des_dim = len(np.array(sample_bbox).flatten())
             
-            # Validate bbox dimension consistency across ALL robots and links
+            # Validate bbox dimension consistency across ALL robots and joints
             for robot_name, desc in self.robot_desc_cache.items():
-                for link_name, link_data in desc['link_info'].items():
-                    bbox = link_data['bbox']
+                for joint_name, joint_data in desc['joint_info'].items():
+                    bbox = joint_data['bbox']
                     bbox_dim = len(np.array(bbox).flatten())
                     if bbox_dim != self.extra_des_dim:
                         raise ValueError(
-                            f"Inconsistent bbox dimensions in robot '{robot_name}', link '{link_name}': "
+                            f"Inconsistent bbox dimensions in robot '{robot_name}', joint '{joint_name}': "
                             f"got {bbox_dim} dims, expected {self.extra_des_dim}. "
-                            f"All robots and links must have identical bbox format after flattening. "
                             f"Regenerate all descriptions with: "
                             f"python generation/get_description_vector_sapien.py --root_dir <robot_type>"
                         )
@@ -387,8 +395,7 @@ class LocomotionDataset(Dataset):
                 joint_names = all_joint_names[:nr_joints]
                 rows = []
                 for joint_name in joint_names:
-                    child_link = desc['joint_to_child_link'][joint_name]
-                    rows.append(np.array(desc['link_info'][child_link]['bbox']).flatten())
+                    rows.append(np.array(desc['joint_info'][joint_name]['bbox']).flatten())
                 self.robot_bbox_np_cache[robot_name] = np.stack(rows).astype(np.float32)
 
             print(f"[INFO]: Limb bbox injection ENABLED - extra_des_dim={self.extra_des_dim}, "
@@ -511,50 +518,142 @@ class LocomotionDataset(Dataset):
             tuple: (inputs, targets) from the file.
         """
         cache_key = (folder_idx, file_idx, env_start_idx)
-        # print(f"[INFO]: Caching file {cache_key}... keys = {self.cache.keys()}")
         cached_file = self.cache.get(cache_key)
         if cached_file is None:
-            # print(f"can't find cached file for {cache_key}, only got {self.cache.keys()}")
+            # Check if a prefetch future is available for this key
+            prefetch_futures = getattr(self, '_prefetch_futures', {})
+            future = prefetch_futures.pop(cache_key, None)
+            if future is not None:
+                inputs, targets = future.result()
+                self.cache.put(cache_key, (inputs, targets))
+                return inputs, targets
             inputs, targets = self._load_file(folder_idx, file_idx, env_start_idx)
             self.cache.put(cache_key, (inputs, targets))
             return inputs, targets
-            # self.cache_hit_count.update(0, 1)
-        # else:
-            # self.cache_hit_count.update(1, 1 / self.batch_size)
-            # print(f"[INFO]: Cached file found {cache_key}")
-            # if self.cache_hit_count.count % 1000000:
-            #     print(f"[INFO]: Cache hit rate: {self.cache_hit_count.avg}")
         return cached_file
+
+    def _prefetch_file(self, folder_idx, file_idx, env_start_idx):
+        """Submit a background prefetch for the given file if not already cached or in-flight."""
+        cache_key = (folder_idx, file_idx, env_start_idx)
+        if self.cache.get(cache_key) is not None:
+            return  # Already in cache
+        if not hasattr(self, '_prefetch_futures'):
+            self._prefetch_futures = {}
+        # Clean out completed futures so the dict doesn't grow unbounded
+        done_keys = [k for k, f in self._prefetch_futures.items() if f.done()]
+        for k in done_keys:
+            del self._prefetch_futures[k]
+        if cache_key in self._prefetch_futures:
+            return  # Already in flight
+        if not hasattr(self, '_prefetch_executor'):
+            self._prefetch_executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        self._prefetch_futures[cache_key] = self._prefetch_executor.submit(
+            self._load_file, folder_idx, file_idx, env_start_idx
+        )
+
+    def __getitems__(self, indices):
+        """
+        Batch-fetch all samples at once (PyTorch 2.x batched fetching).
+
+        Since all indices in a batch share the same (folder_idx, file_idx, env_start_idx),
+        this avoids per-sample cache lookups and enables vectorized numpy indexing.
+
+        Returns a single-element list containing a _PreBatched wrapper so that
+        collate_fn can skip redundant stacking.
+        """
+        if not indices:
+            return []
+
+        first = indices[0]
+        folder_idx, file_idx, env_start_idx = first[0], first[1], first[2]
+
+        # --- single cache lookup for entire batch ---
+        start_time = time.time()
+        all_inputs, all_targets = self._cache_file(folder_idx, file_idx, env_start_idx)
+        io_time = time.time() - start_time
+        if io_time > 5.0:
+            print(f"[SLOW-IO] __getitems__ file load took {io_time:.1f}s for "
+                  f"folder={folder_idx} file={file_idx}", flush=True)
+
+        # --- vectorised extraction ---
+        steps = np.array([idx[3] for idx in indices], dtype=np.intp)
+        envs = np.array([idx[4] for idx in indices], dtype=np.intp)
+        input_batch = all_inputs[steps, envs]    # (B, D) float32, contiguous copy
+        target_batch = all_targets[steps, envs]  # (B, A) float32, contiguous copy
+
+        metadata = self.metadata_list[folder_idx]
+        robot_name = self.folder_idx_to_file_name[folder_idx]
+
+        # --- transform once for the whole batch ---
+        st = time.time()
+        transformed = self._transform_samples_batched(input_batch, target_batch, metadata, robot_name)
+        processing_time = time.time() - st
+
+        batch_inputs = transformed[:-1]
+        batch_targets = transformed[-1]
+
+        # --- prefetch next file(s) (background I/O while GPU trains) ---
+        # Look ahead multiple batches to find upcoming file transitions and
+        # start loading them early, well before the worker actually needs them.
+        if hasattr(self, '_batch_next_files') and hasattr(self, '_batch_counter'):
+            next_keys = self._batch_next_files.get(self._batch_counter, [])
+            current_key = (folder_idx, file_idx, env_start_idx)
+            for nk in next_keys:
+                if nk != current_key:
+                    self._prefetch_file(*nk)
+            self._batch_counter += getattr(self, '_batch_stride', 1)
+
+        return [_PreBatched((
+            batch_inputs,
+            batch_targets,
+            robot_name,
+            torch.full((len(indices),), io_time),
+            torch.tensor(processing_time),
+        ))]
 
     def __getitem__(self, index):
         """
-        Get a sample from the dataset.
-
-        Args:
-            index (tuple): A four-tuple (folder_idx, file_idx, step, env) specifying the sample.
-
-        Returns:
-            tuple: Transformed input and target for the sample.
+        Fallback per-sample fetch (used when __getitems__ is not available).
         """
-
         folder_idx, file_idx, env_start_idx, step, env = index
 
-        # Load data from cache or file
         start_time = time.time()
         inputs, targets = self._cache_file(folder_idx, file_idx, env_start_idx)
         io_time = time.time() - start_time
         if io_time > 5.0:
             print(f"[SLOW-IO] __getitem__ file load took {io_time:.1f}s for folder={folder_idx} file={file_idx}", flush=True)
 
-        # Retrieve specific sample within the file
         input_sample = inputs[step, env]
         target_sample = targets[step, env]
         del inputs, targets
 
-        # Get metadata for transformation
-        metadata = self.metadata_list[folder_idx]  # potential copy-on-write behavior if using native python list
+        metadata = self.metadata_list[folder_idx]
 
         return input_sample, target_sample, metadata, self.folder_idx_to_file_name[folder_idx], torch.tensor(io_time)
+
+    def _transform_samples_batched(self, input_samples, target_samples, metadata, robot_name=None):
+        """
+        Transform pre-stacked numpy arrays into model-ready tensors.
+
+        Unlike _transform_samples, this accepts a single metadata dict and
+        pre-stacked (B, D) numpy arrays, avoiding redundant np.stack calls.
+
+        Args:
+            input_samples (np.ndarray): shape (B, D), float32.
+            target_samples (np.ndarray): shape (B, A), float32.
+            metadata (dict): Single metadata dict (all samples share one file).
+            robot_name (str): Robot name for limb shape lookup (optional).
+
+        Returns:
+            tuple: Transformed components.
+        """
+        batch_size = input_samples.shape[0]
+
+        # Zero-copy when already contiguous float32 (fancy indexing guarantees contiguous)
+        state = torch.from_numpy(np.ascontiguousarray(input_samples)).to(dtype=torch.float32)
+        target = torch.from_numpy(np.ascontiguousarray(target_samples)).to(dtype=torch.float32)
+
+        return self._transform_state_target(state, target, batch_size, metadata, robot_name)
 
     def _transform_samples(self, input_samples, target_samples, metadata_list, robot_name=None):
         """
@@ -579,6 +678,13 @@ class LocomotionDataset(Dataset):
         # The training loop is responsible for moving to CUDA.
         state = torch.from_numpy(np.stack(input_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, D)
         target = torch.from_numpy(np.stack(target_samples, axis=0)).to(dtype=torch.float32)  # Shape: (B, A)
+
+        return self._transform_state_target(state, target, batch_size, metadata, robot_name)
+
+    def _transform_state_target(self, state, target, batch_size, metadata, robot_name=None):
+        """
+        Shared transform logic for both batched and per-sample paths.
+        """
 
         # Dynamic Joint Data Transformation
         dynamic_joint_observation_length = metadata["dynamic_joint_observation_length"]
@@ -654,20 +760,18 @@ class LocomotionDataset(Dataset):
         """
         Collate function to combine samples into a batch.
 
-        Args:
-            batch (list): List of samples, where each sample is a 2-tuple:
-                          (inputs, target).
-
-        Returns:
-            tuple: A 2-tuple where:
-                - The first element is a tuple of batched inputs (stacked by component).
-                - The second element is the batched target tensor.
+        Handles two cases:
+        1. _PreBatched from __getitems__: data is already transformed, just unwrap.
+        2. List of per-sample tuples from __getitem__: stack and transform (fallback).
         """
-        # Split batch into inputs and targets
-        inputs, targets, metadata_list, robot_names, io_times = zip(*batch)  # inputs: list of tuples, targets: list of tensors
+        # Fast path: __getitems__ already did all the work
+        if len(batch) == 1 and isinstance(batch[0], _PreBatched):
+            return batch[0].data
+
+        # Slow fallback path (per-sample __getitem__)
+        inputs, targets, metadata_list, robot_names, io_times = zip(*batch)
         assert len(set(robot_names)) == 1, f"got different robot names in a batch: {set(robot_names)}"
 
-        # batch transform these samples (pass robot_name for limb shape conditioning)
         st = time.time()
         transformed_sample = self._transform_samples(inputs, targets, metadata_list, robot_name=robot_names[0])
         inputs, targets = transformed_sample[:-1], transformed_sample[-1]
@@ -675,15 +779,7 @@ class LocomotionDataset(Dataset):
         if processing_times > 5.0:
             print(f"[SLOW-COLLATE] _transform_samples took {processing_times:.1f}s for {robot_names[0]}, batch_size={len(batch)}", flush=True)
 
-        # # Transpose the inputs to group by component
-        # inputs_by_component = zip(*inputs)  # Converts list of tuples into tuples of components
         batched_inputs = inputs
-
-        # # Stack each component of the inputs
-        # batched_inputs = tuple(torch.stack(components) for components in inputs_by_component)
-
-        # # Stack the targets
-        # batched_targets = torch.stack(targets)
         batched_targets = targets
 
         return batched_inputs, batched_targets, robot_names[0], torch.stack(io_times), torch.tensor(processing_times)
@@ -768,6 +864,35 @@ class LocomotionDataset(Dataset):
 
         # flatten the inner 2-layer nested lists into one 1-layer list
         samples_per_worker = [list(chain(*worker_sample_lists)) for worker_sample_lists in file_sample_lists_per_worker]
+
+        # --- Stagger file transitions across workers ---
+        # Without staggering, ALL workers hit their first file boundary at the
+        # same batch position, causing a synchronized I/O storm where 16+ workers
+        # all try to read new H5 files at once (10s * contention = 30s stalls).
+        # 
+        # Fix: rotate each worker's batch list by a different offset, computed so
+        # that the file boundaries are evenly spread across time.  The rotation
+        # amount for worker k is k * (batches_per_file / num_workers), aligned to
+        # file-group boundaries to preserve cache locality within each file.
+        if num_workers > 1 and file_sample_lists_per_worker[0]:
+            first_file_batch_count = len(file_sample_lists_per_worker[0][0])
+            if first_file_batch_count > num_workers:
+                for worker_idx in range(1, num_workers):
+                    offset = (worker_idx * first_file_batch_count) // num_workers
+                    s = samples_per_worker[worker_idx]
+                    samples_per_worker[worker_idx] = s[offset:] + s[:offset]
+
+        # Pad so all workers have the same length (required for interleaving)
+        max_len = max(len(s) for s in samples_per_worker)
+        for worker_idx in range(len(samples_per_worker)):
+            s = samples_per_worker[worker_idx]
+            if s and len(s) < max_len:
+                # Repeat from beginning to fill gap
+                orig_len = len(s)
+                while len(s) < max_len:
+                    s.append(s[len(s) % orig_len])
+            samples_per_worker[worker_idx] = s[:max_len]
+
         assert all(len(samples) == len(samples_per_worker[0]) for samples in samples_per_worker), \
             (f"the number of samples for workers differ: {[len(samples) for samples in samples_per_worker]}"
              f"This function assumes all files have the same number of samples. Is this true?")
@@ -834,21 +959,98 @@ class LocomotionDataset(Dataset):
               f"interleave_factor={interleave_factor}, "
               f"num_files={len(self.file_indices)}", flush=True)
 
+        # Build per-batch "next file keys" map for prefetching.
+        # For each batch index i, collect ALL distinct upcoming file keys that
+        # this worker will need within the next PREFETCH_LOOKAHEAD batches.
+        #
+        # The lookahead must be large enough that we START loading the next file
+        # well before the current file's batches are exhausted.  On network
+        # storage, a single H5 read can take 10-15 s, while a file's worth of
+        # batches may only take ~2 s of GPU time.  We therefore need to see
+        # several file transitions ahead and load them concurrently.
+        #
+        # Compute a safe lookahead: enough worker-batches to cover
+        # MAX_PREFETCH_FILES file transitions.  We estimate batches-per-file
+        # from the first file's sample count and the batch size.
+        MAX_PREFETCH_FILES = 5  # how many future files to prefetch concurrently
+        first_file_key = next(iter(self.file_indices))
+        _, _, est_steps, _ = self.file_indices[first_file_key]
+        est_batches_per_file = max(1, (est_steps * self.max_envs_per_file_in_memory * self.h5_repeat_factor) // batch_size)
+        PREFETCH_LOOKAHEAD = max(50, est_batches_per_file * (MAX_PREFETCH_FILES + 1))
+        print(f"[DATALOADER] Prefetch config: est_batches_per_file={est_batches_per_file}, "
+              f"PREFETCH_LOOKAHEAD={PREFETCH_LOOKAHEAD}, MAX_PREFETCH_FILES={MAX_PREFETCH_FILES}", flush=True)
+
+        self._batch_next_files = {}
+        effective_workers = max(num_workers, 1)
+        for i in range(len(batch_indices)):
+            current_batch = batch_indices[i]
+            if not current_batch:
+                continue
+            current_key = (current_batch[0][0], current_batch[0][1], current_batch[0][2])
+            upcoming_keys = []
+            for ahead in range(1, PREFETCH_LOOKAHEAD + 1):
+                next_i = i + effective_workers * ahead
+                if next_i < len(batch_indices) and batch_indices[next_i]:
+                    nk = (batch_indices[next_i][0][0], batch_indices[next_i][0][1], batch_indices[next_i][0][2])
+                    if nk != current_key and nk not in upcoming_keys:
+                        upcoming_keys.append(nk)
+                        if len(upcoming_keys) >= MAX_PREFETCH_FILES:
+                            break
+            if upcoming_keys:
+                self._batch_next_files[i] = upcoming_keys
+
+        # Build per-worker list of the first few unique file keys for cache warm-up.
+        # This lets _worker_init_fn pre-load files before iteration starts, so the
+        # first file transition doesn't cause a 10 s stall.
+        WARM_UP_FILES = min(3, MAX_PREFETCH_FILES)
+        worker_warmup_keys = [[] for _ in range(effective_workers)]
+        for w in range(effective_workers):
+            seen = set()
+            idx = w  # first batch index assigned to this worker
+            while idx < len(batch_indices) and len(seen) < WARM_UP_FILES + 1:
+                b = batch_indices[idx]
+                if b:
+                    k = (b[0][0], b[0][1], b[0][2])
+                    if k not in seen:
+                        seen.add(k)
+                        # skip the very first key (loaded on first __getitems__),
+                        # warm up the ones AFTER that
+                        if len(seen) > 1:
+                            worker_warmup_keys[w].append(k)
+                idx += effective_workers
+
         # When num_workers > 1, each worker gets a fraction of the cache.
-        # We use worker_init_fn to resize each worker's cache after fork.
+        # Cache must hold at least (MAX_PREFETCH_FILES + 1) entries: the current
+        # file being consumed + all files being prefetched concurrently.
+        batch_next_files = self._batch_next_files  # capture for closure
+        _warmup_keys = worker_warmup_keys  # capture for closure
+        _n_prefetch_threads = MAX_PREFETCH_FILES  # one thread per concurrent file load
         def _worker_init_fn(worker_id):
             dataset = torch.utils.data.get_worker_info().dataset
-            per_worker_cache_size = max(1, dataset.max_files_in_memory // num_workers)
+            per_worker_cache_size = max(MAX_PREFETCH_FILES + 2, dataset.max_files_in_memory // num_workers)
             dataset.cache = ThreadSafeDict(max_size=per_worker_cache_size)
-            print(f"[DATALOADER] Worker {worker_id} initialized with cache_size={per_worker_cache_size}", flush=True)
+            dataset._batch_next_files = batch_next_files
+            dataset._batch_counter = worker_id  # each worker starts at its own offset
+            dataset._batch_stride = effective_workers
+            dataset._prefetch_futures = {}
+            dataset._prefetch_executor = concurrent.futures.ThreadPoolExecutor(max_workers=_n_prefetch_threads)
+
+            # Warm-up: pre-load the next few files this worker will need so
+            # the first file transitions don't stall the GPU.
+            warmup = _warmup_keys[worker_id] if worker_id < len(_warmup_keys) else []
+            for wk in warmup:
+                dataset._prefetch_file(*wk)
+            print(f"[DATALOADER] Worker {worker_id} initialized with cache_size={per_worker_cache_size}, "
+                  f"prefetch_threads={_n_prefetch_threads}, warming_up={len(warmup)} files", flush=True)
 
         return DataLoader(
             self,
             batch_sampler=batch_indices,
             collate_fn=self.collate_fn,
             num_workers=num_workers,
-            pin_memory=False,
+            pin_memory=True,
             worker_init_fn=_worker_init_fn if num_workers > 1 else None,
-            prefetch_factor=4
+            persistent_workers=num_workers > 1,
+            prefetch_factor=4 if num_workers > 0 else None
             # **kwargs
         )

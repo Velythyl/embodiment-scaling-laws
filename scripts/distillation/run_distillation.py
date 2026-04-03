@@ -109,6 +109,8 @@ def parse_arguments():
                         help="Number of batches before one gradient update.")
     parser.add_argument("--h5_repeat_factor", type=int, default=1, help="Number of times we repeat sampling data from"
                                                                         "cache consecutively in one epoch.")
+    parser.add_argument("--warmup_pct", type=float, default=0.0,
+                        help="LR warmup as a fraction of total iterations (e.g. 0.05 for 5%). 0 disables warmup.")
     parser.add_argument("--use_amp", type=int, default=0, help="Whether to use automatic mixed precision.")
     parser.add_argument("--max_parallel_envs_per_file", type=int, default=2048,
                         help="Number of parallel envs per file.")
@@ -127,6 +129,8 @@ def parse_arguments():
                         default="logs/rsl_rl",
                         help="Directory containing the dataset.")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint for resume training.")
+    parser.add_argument("--log_epoch_pct", type=float, default=2.0,
+                        help="Log training metrics every this percent of epoch completion (e.g. 10 means every 10%).")
     
     # Robot description arguments (for description vector ablation experiments)
     parser.add_argument("--description_filename", type=str, default=None,
@@ -183,9 +187,10 @@ def parse_arguments():
 
 
 def get_meter_dict_avg(meter_dicts):
-    if len(meter_dicts) == 0:
-        return 0
-    return sum([meter.avg for meter in meter_dicts.values()])/len(meter_dicts)
+    active = [meter.avg for meter in meter_dicts.values() if meter.count > 0]
+    if len(active) == 0:
+        return None
+    return sum(active) / len(active)
 
 
 
@@ -215,7 +220,8 @@ def reweight_loss(loss, data_source_name):
 
 
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
-          log_dir, checkpoint_interval, model, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch):
+          log_dir, checkpoint_interval, model, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
+          log_epoch_pct=10.0):
     """Training loop with validation, TensorBoard logging, and checkpoint saving."""
     scaler = torch.cuda.amp.GradScaler()
 
@@ -246,6 +252,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             train_phase_start_time = time.time()
             iteration_start_time = time.time()
             _batch_fetch_start = time.time()
+            next_log_pct = log_epoch_pct
             for index, (batch_inputs, batch_targets, data_source_name, io_times, processing_times) in enumerate(pbar):
                 _batch_fetch_time = time.time() - _batch_fetch_start
                 if _batch_fetch_time > 10.0:
@@ -310,7 +317,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                 # Log times
                 # start_time = time.time()
-                if index % 100 == 0:
+                current_pct = 100.0 * (index + 1) / len(train_dataloader)
+                if current_pct >= next_log_pct or index == 0:
+                    next_log_pct = current_pct - (current_pct % log_epoch_pct) + log_epoch_pct
                     log_dict = {
                         "Train/times/io_per_thread": io_times.mean().item(),
                         "Train/times/data_processing_per_thread": processing_times.mean().item(),
@@ -325,24 +334,24 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         "Train/loss-iter/avg": loss.item(),
                         "Train/lr-iter": optimizer.param_groups[0]['lr'],
                         "iteration": iteration,
+                        "epoch_progress": epoch + (index + 1) / len(train_dataloader),
                     }
                     if grad_norm is not None:
                         log_dict["Train/grad_norm-iter"] = grad_norm
                     wandb.log(log_dict)
-                    pct = 100.0 * (index + 1) / len(train_dataloader)
                     train_bps = (index + 1) / (time.time() - train_phase_start_time)
-                    print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
+                    print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {current_pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
 
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
-                    scheduler.step(iteration)
+                    scheduler.step()
 
                 iteration_start_time = time.time()  # start time of next iteration
                 _batch_fetch_start = time.time()
 
         # Collect training metrics (logged together with val/test at end of epoch)
-        epoch_log_dict = {f"Train/loss/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
-        epoch_log_dict["Train/loss/avg"] = get_meter_dict_avg(train_loss_meters)
+        epoch_log_dict = {f"Train-Per-Robot/{robot_name}": meter.avg for robot_name, meter in train_loss_meters.items()}
+        epoch_log_dict["Train/epoch-loss/avg"] = get_meter_dict_avg(train_loss_meters)
         epoch_log_dict["Train/lr"] = optimizer.param_groups[0]['lr']
         epoch_log_dict["epoch"] = epoch + 1
         train_total_bps = len(train_dataloader) / (time.time() - train_phase_start_time)
@@ -384,17 +393,19 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                     # Update progress bar with current loss
                     pbar.set_postfix(
-                        {"Loss": f"{get_meter_dict_avg(val_loss_meters):.4f}"})
+                        {"Loss": f"{get_meter_dict_avg(val_loss_meters) or 0:.4f}"})
 
                     if index > 0.03 * len(val_dataloader):
                         break
 
-        # Collect validation metrics
-        val_log_dict = {f"Val/loss/{robot_name}": meter.avg for robot_name, meter in val_loss_meters.items()}
-        val_log_dict["Val/loss/avg"] = get_meter_dict_avg(val_loss_meters)
+        # Collect validation metrics (skip robots not seen in this epoch's sample)
+        val_log_dict = {f"Val-Per-Robot/{robot_name}": meter.avg for robot_name, meter in val_loss_meters.items() if meter.count > 0}
+        val_avg = get_meter_dict_avg(val_loss_meters)
+        if val_avg is not None:
+            val_log_dict["Val/epoch-loss/avg"] = val_avg
         epoch_log_dict.update(val_log_dict)
         val_total_bps = (index + 1) / (time.time() - val_phase_start_time)
-        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {get_meter_dict_avg(val_loss_meters):.4f} | {val_total_bps:.2f} batch/s")
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {val_avg if val_avg is not None else 'N/A'} | {val_total_bps:.2f} batch/s")
 
         del val_dataloader
         if epoch == 0:
@@ -433,17 +444,19 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                         # Update progress bar with current loss
                         pbar.set_postfix(
-                            {"Loss": f"{get_meter_dict_avg(test_loss_meters):.4f}"})
+                            {"Loss": f"{get_meter_dict_avg(test_loss_meters) or 0:.4f}"})
 
                         if index > 0.03 * len(test_dataloader):
                             break
 
-            # Collect test metrics
-            test_log_dict = {f"Test/loss/{robot_name}": meter.avg for robot_name, meter in test_loss_meters.items()}
-            test_log_dict["Test/loss/avg"] = get_meter_dict_avg(test_loss_meters)
+            # Collect test metrics (skip robots not seen in this epoch's sample)
+            test_log_dict = {f"Test-Per-Robot/{robot_name}": meter.avg for robot_name, meter in test_loss_meters.items() if meter.count > 0}
+            test_avg = get_meter_dict_avg(test_loss_meters)
+            if test_avg is not None:
+                test_log_dict["Test/epoch-loss/avg"] = test_avg
             epoch_log_dict.update(test_log_dict)
             test_total_bps = (index + 1) / (time.time() - test_phase_start_time)
-            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {get_meter_dict_avg(test_loss_meters):.4f} | {test_total_bps:.2f} batch/s")
+            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {test_avg if test_avg is not None else 'N/A'} | {test_total_bps:.2f} batch/s")
 
             del test_dataloader
 
@@ -455,13 +468,14 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             save_checkpoint(policy, optimizer, epoch + 1, log_dir)
 
         # Save the best model based on validation loss
-        if get_meter_dict_avg(val_loss_meters) < best_val_loss:
-            best_val_loss = get_meter_dict_avg(val_loss_meters)
+        if val_avg is not None and val_avg < best_val_loss:
+            best_val_loss = val_avg
             save_checkpoint(policy, optimizer, epoch + 1, log_dir, is_best=True)
 
+        test_avg_display = get_meter_dict_avg(test_loss_meters)
         print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {get_meter_dict_avg(train_loss_meters):.6f}, "
-              f"Val Loss: {get_meter_dict_avg(val_loss_meters):.6f}, Best Val Loss: {best_val_loss:.6f}, "
-              f"Test Loss: {get_meter_dict_avg(test_loss_meters):.6f}")
+              f"Val Loss: {val_avg if val_avg is not None else 'N/A'}, Best Val Loss: {best_val_loss:.6f}, "
+              f"Test Loss: {test_avg_display if test_avg_display is not None else 'N/A'}")
 
     if wandb.run is not None:
         wandb.finish()
@@ -628,9 +642,23 @@ def main():
         traceback.print_exc()
         sys.stdout.flush()
         raise
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                           T_max=args_cli.num_epochs*len(train_dataloader))
-    print("[INFO] Scheduler created successfully")
+    total_iterations = args_cli.num_epochs * len(train_dataloader)
+    if args_cli.warmup_pct > 0:
+        # Linear warmup then cosine annealing
+        warmup_iters = max(1, int(args_cli.warmup_pct * total_iterations))
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+            optimizer, start_factor=1e-2, end_factor=1.0, total_iters=warmup_iters
+        )
+        cosine_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=total_iterations - warmup_iters
+        )
+        scheduler = torch.optim.lr_scheduler.SequentialLR(
+            optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_iters]
+        )
+        print(f"[INFO] Scheduler created with linear warmup ({warmup_iters} iters, {args_cli.warmup_pct*100:.1f}%) + cosine annealing")
+    else:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_iterations)
+        print("[INFO] Scheduler created with cosine annealing (no warmup)")
     sys.stdout.flush()
 
     # load checkpoint if path specified
@@ -664,7 +692,8 @@ def main():
             batch_size=args_cli.batch_size,
             num_workers=args_cli.num_workers,
             use_amp=bool(args_cli.use_amp),
-            start_epoch=start_epoch
+            start_epoch=start_epoch,
+            log_epoch_pct=args_cli.log_epoch_pct
         )
         print("[INFO] Training function returned successfully")
         sys.stdout.flush()
@@ -748,6 +777,6 @@ python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allro
 
 python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 append_argparse=" --num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 "
 
-
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml  --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300  append_argparse="--num_workers 1  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 4.8e-3 --warmup_pct 0.05"
 
 """

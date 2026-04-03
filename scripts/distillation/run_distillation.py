@@ -143,7 +143,7 @@ def parse_arguments():
     
     # Wandb arguments
     parser.add_argument("--wandb", action=argparse.BooleanOptionalAction, default=True, help="Enable wandb logging (syncs tensorboard). Use --no-wandb to disable.")
-    parser.add_argument("--wandb_project", type=str, default="esl", help="Wandb project name.")
+    parser.add_argument("--wandb_project", type=str, default="esl_apr2", help="Wandb project name.")
     parser.add_argument("--wandb_entity", type=str, default="velythyl", help="Wandb entity (team/username).")
     parser.add_argument("--wandb_name", type=str, default=None, help="Wandb run name. Defaults to exp_name.")
 
@@ -311,6 +311,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Log times
                 # start_time = time.time()
                 if index % 100 == 0:
+                    epoch_completion = epoch + (index + 1) / len(train_dataloader)
                     log_dict = {
                         "Train/times/io_per_thread": io_times.mean().item(),
                         "Train/times/data_processing_per_thread": processing_times.mean().item(),
@@ -325,6 +326,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         "Train/loss-iter/avg": loss.item(),
                         "Train/lr-iter": optimizer.param_groups[0]['lr'],
                         "iteration": iteration,
+                        "epoch_completion": epoch_completion,
                     }
                     if grad_norm is not None:
                         log_dict["Train/grad_norm-iter"] = grad_norm
@@ -746,7 +748,7 @@ python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allro
 
 
 
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 append_argparse=" --num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 "
+python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 append_argparse=" --num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 "
 
 
 

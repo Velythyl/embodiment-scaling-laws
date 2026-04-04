@@ -10,6 +10,15 @@ import os
 import sys
 import shlex
 
+# Ensure the scripts/ directory is on sys.path so Hydra can discover
+# hydra_plugins (packed_launcher, etc.) and so run_distillation can be imported.
+_scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+_distillation_dir = os.path.dirname(os.path.abspath(__file__))
+if _distillation_dir not in sys.path:
+    sys.path.insert(0, _distillation_dir)
+
 import hydra
 from omegaconf import DictConfig, OmegaConf
 

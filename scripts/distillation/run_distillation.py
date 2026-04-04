@@ -475,13 +475,10 @@ def main(cfg: DictConfig):
     model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"[INFO] Using device: {model_device}")
 
-    # Determine dynamic joint description dimension
-    dynamic_joint_des_dim_cfg = cfg.ablation.dynamic_joint_des_dim
-    if dynamic_joint_des_dim_cfg is not None:
-        dynamic_joint_des_dim = dynamic_joint_des_dim_cfg
-    elif train_dataset.use_limb_bboxes:
+    # Determine dynamic joint description dimension via auto-detection
+    if train_dataset.use_limb_bboxes:
         dynamic_joint_des_dim = 18 + train_dataset.extra_des_dim
-        print(f"[INFO] Limb bboxes detected, auto-setting dynamic_joint_des_dim={dynamic_joint_des_dim} (18 base + {train_dataset.extra_des_dim} extra)")
+        print(f"[INFO] Limb bboxes detected, dynamic_joint_des_dim={dynamic_joint_des_dim} (18 base + {train_dataset.extra_des_dim} extra)")
     else:
         dynamic_joint_des_dim = 18
         print("[INFO] No limb bboxes in description file, using baseline dynamic_joint_des_dim=18")

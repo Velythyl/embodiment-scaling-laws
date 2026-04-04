@@ -58,7 +58,6 @@ def build_legacy_parser():
                         default=os.path.join(os.environ.get("SCRATCH", ""),
                                              "embodiment-scaling-laws/exts/embodiment_scaling_laws/"
                                              "embodiment_scaling_laws/assets/Robots/GenBot1K-v7"))
-    parser.add_argument("--dynamic_joint_des_dim", type=int, default=None)
     parser.add_argument("--wandb", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--wandb_project", type=str, default="esl_apr2")
     parser.add_argument("--wandb_entity", type=str, default="velythyl")
@@ -187,7 +186,6 @@ def build_ablation_default():
         ("asset_base_path",
          "${oc.env:SCRATCH,}/embodiment-scaling-laws/exts/embodiment_scaling_laws/"
          "embodiment_scaling_laws/assets/Robots/GenBot1K-v7"),
-        ("dynamic_joint_des_dim", None),
     ])
 
 

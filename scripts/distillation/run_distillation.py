@@ -8,7 +8,7 @@ import shlex
 
 import wandb
 import hydra
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # for urma_model
@@ -19,11 +19,9 @@ try:
 except Exception as e:
     print(f"[ERROR] Failed to change directory: {e}")
 from utility_functions import (get_most_recent_h5py_record_path, save_checkpoint, AverageMeter,
-                   save_args_to_yaml, compute_gradient_norm, get_process_ram_usage, get_system_ram_usage)
+                   compute_gradient_norm, get_process_ram_usage, get_system_ram_usage)
 from dataset_functions import LocomotionDataset
 import tqdm
-import argparse
-import yaml
 from urma_model.policy_3head_scale2 import get_policy
 print("Loaded URMA initially without error")
 
@@ -86,105 +84,6 @@ def set_seed(seed):
 
 set_seed(0)
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="Train an agent using supervised learning.")
-
-    # Define arguments with defaults
-    parser.add_argument("--train_set", nargs="+", type=str, default=None, required=True,
-                        help="List of robot names as the training set.")
-    parser.add_argument("--test_set", nargs="+", type=str, default=None, required=False,
-                        help="List of robot names as the test set.")
-    parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs to run.")
-    parser.add_argument("--batch_size", type=int, default=256, help="Batch size. 4096*16 takes 10G")
-    parser.add_argument("--exp_name", type=str, default=None,
-                        help="Name of the experiment. If provided, the current date and time will be appended. "
-                             "Default is the current date and time.")
-    parser.add_argument("--checkpoint_interval", type=int, default=5, help="Save checkpoint every N epochs.")
-    parser.add_argument("--log_dir", type=str, default="log_dir", help="Base directory for logs and checkpoints.")
-    parser.add_argument("--lr", type=float, default=3e-4, help="Unit learning rate (for a batch size of 512)")
-    parser.add_argument("--num_workers", type=int, default=0, help="Number of workers for torch data loader.")
-    parser.add_argument("--max_files_in_memory", type=int, default=1, help="Max number of data files in memory.")
-    parser.add_argument("--val_ratio", type=float, default=0.15, help="Validation set size.")
-    parser.add_argument("--gradient_acc_steps", type=int, default=1,
-                        help="Number of batches before one gradient update.")
-    parser.add_argument("--h5_repeat_factor", type=int, default=1, help="Number of times we repeat sampling data from"
-                                                                        "cache consecutively in one epoch.")
-    parser.add_argument("--warmup_pct", type=float, default=0.0,
-                        help="LR warmup as a fraction of total iterations (e.g. 0.05 for 5%). 0 disables warmup.")
-    parser.add_argument("--use_amp", type=int, default=0, help="Whether to use automatic mixed precision.")
-    parser.add_argument("--max_parallel_envs_per_file", type=int, default=2048,
-                        help="Number of parallel envs per file.")
-    parser.add_argument("--max_envs_per_file_in_memory", type=int, default=512,
-                       help="Number of envs per file that can be stored in cache.")
-    parser.add_argument(
-        "--model",
-        type=str,
-        required=True,
-        choices=["urma"],
-        help="Model type."
-    )
-    # Add argument for YAML configuration
-    parser.add_argument("--config", type=str, help="Path to YAML configuration file.")
-    parser.add_argument("--dataset_dir", type=str,
-                        default="logs/rsl_rl",
-                        help="Directory containing the dataset.")
-    parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint for resume training.")
-    parser.add_argument("--log_epoch_pct", type=float, default=2.0,
-                        help="Log training metrics every this percent of epoch completion (e.g. 10 means every 10%).")
-    
-    # Robot description arguments (for description vector ablation experiments)
-    parser.add_argument("--description_filename", type=str, default=None,
-                        help="Name of robot description JSON to load from each robot's asset folder. "
-                             "If not specified, uses baseline 18-dim joint description (no limb bboxes). "
-                             "Examples: 'robot_description_vec_with_bboxes.json' for computed bboxes, "
-                             "'robot_description_vec_custom.json' for custom vectors.")
-    parser.add_argument("--asset_base_path", type=str,
-                        default=os.path.join(os.environ.get("SCRATCH", ""), "embodiment-scaling-laws/exts/embodiment_scaling_laws/embodiment_scaling_laws/assets/Robots/GenBot1K-v7"),
-                        help="Base path to robot assets (required if description_filename is provided)")
-    parser.add_argument("--dynamic_joint_des_dim", type=int, default=None,
-                        help="Dimension of joint description vector. If not specified, auto-detected: "
-                             "18 for baseline, 24 when using description files with limb bboxes.")
-    
-    # Wandb arguments
-    parser.add_argument("--wandb", action=argparse.BooleanOptionalAction, default=True, help="Enable wandb logging (syncs tensorboard). Use --no-wandb to disable.")
-    parser.add_argument("--wandb_project", type=str, default="esl_apr2", help="Wandb project name.")
-    parser.add_argument("--wandb_entity", type=str, default="velythyl", help="Wandb entity (team/username).")
-    parser.add_argument("--wandb_name", type=str, default=None, help="Wandb run name. Defaults to exp_name.")
-
-    args = parser.parse_args()
-
-    # Pretty print args (YAML-like), skipping long list fields
-    print("\n" + "="*50)
-    print("Arguments:")
-    print("="*50)
-    skip_fields = {'train_set', 'test_set'}
-    for key, value in sorted(vars(args).items()):
-        if key in skip_fields:
-            print(f"  {key}: <{len(value) if value else 0} items>")
-        else:
-            print(f"  {key}: {value}")
-    print("="*50 + "\n")
-
-    # Load and override arguments from YAML file if specified
-    if args.config:
-        print(f'Loading configuration from {args.config}. Specified params will be overridden.')
-
-        with open(args.config, 'r') as file:
-            config_args = yaml.safe_load(file)
-
-        for key, value in config_args.items():
-            if hasattr(args, key):
-                setattr(args, key, value)
-
-    # Fill missing arguments with defaults
-    for action in parser._actions:
-        if action.dest == "help":
-            continue
-        if getattr(args, action.dest) is None and action.default is not None:
-            setattr(args, action.dest, action.default)
-
-    return args
-
 
 def get_meter_dict_avg(meter_dicts):
     active = [meter.avg for meter in meter_dicts.values() if meter.count > 0]
@@ -220,7 +119,7 @@ def reweight_loss(loss, data_source_name):
 
 
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
-          log_dir, checkpoint_interval, model, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
+          log_dir, checkpoint_interval, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
           log_epoch_pct=10.0):
     """Training loop with validation, TensorBoard logging, and checkpoint saving."""
     scaler = torch.cuda.amp.GradScaler()
@@ -265,13 +164,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
                 start_time = time.time()
                 with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=use_amp):
-                    if model in ['urma']:
-                        batch_predictions = policy(*batch_inputs)
-                    else:
-                        one_input = torch.cat([
-                            component.flatten(1) for component in batch_inputs
-                        ], dim=1)
-                        batch_predictions = policy(one_input)
+                    batch_predictions = policy(*batch_inputs)
 
                     loss = criterion(batch_predictions, batch_targets)
 
@@ -376,13 +269,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             with tqdm.tqdm(val_prefetcher, total=len(val_dataloader), desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                 for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
 
-                    if model in ['urma']:
-                        batch_predictions = policy(*batch_inputs)
-                    else:
-                        one_input = torch.cat([
-                            component.flatten(1) for component in batch_inputs
-                        ], dim=1)
-                        batch_predictions = policy(one_input)
+                    batch_predictions = policy(*batch_inputs)
 
                     loss = criterion(batch_predictions, batch_targets)
 
@@ -427,13 +314,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 with tqdm.tqdm(test_prefetcher, total=len(test_dataloader), desc=f"Test Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
                     for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
 
-                        if model in ['urma']:
-                            batch_predictions = policy(*batch_inputs)
-                        else:
-                            one_input = torch.cat([
-                                component.flatten(1) for component in batch_inputs
-                            ], dim=1)
-                            batch_predictions = policy(one_input)
+                        batch_predictions = policy(*batch_inputs)
 
                         loss = criterion(batch_predictions, batch_targets)
 
@@ -482,37 +363,50 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
     print("[INFO] Training completed. Wandb logs saved.")
 
 
-def main():
-    args_cli = parse_arguments()
+def main(cfg: DictConfig):
+    # Pretty print config
+    print("\n" + "="*50)
+    print("Configuration:")
+    print("="*50)
+    print(OmegaConf.to_yaml(cfg, resolve=True))
+    print("="*50 + "\n")
 
-    # Prepare log directory
-    log_dir = os.path.join(args_cli.log_dir, args_cli.exp_name)
-    os.makedirs(log_dir, exist_ok=True)
-
-    # Save args to a YAML file for reproducibility
-    config_save_path = os.path.join(log_dir, "config.yaml")
-    save_args_to_yaml(args_cli, config_save_path)
-    print(f"[INFO] Config saved to {config_save_path}")
+    # Set seed
+    seed = cfg.meta.seed
+    if seed >= 0:
+        set_seed(seed)
 
     # Initialize wandb
-    if args_cli.wandb:
+    wandb_mode = cfg.meta.wandb_mode
+    if wandb_mode != "disabled":
         wandb.init(
-            project=args_cli.wandb_project,
-            entity=args_cli.wandb_entity,
-            name=args_cli.wandb_name or args_cli.exp_name,
-            config=vars(args_cli),
-            dir=log_dir
+            project=cfg.meta.project,
+            name=cfg.meta.run_name,
+            config=OmegaConf.to_container(cfg, resolve=True),
+            mode=wandb_mode,
+            tags=list(cfg.meta.tags) if cfg.meta.tags else None,
+            notes=cfg.meta.notes or None,
         )
-        print(f"[INFO] Wandb initialized")
+        print(f"[INFO] Wandb initialized (mode={wandb_mode})")
+
+    # Use wandb's run directory for logging, fall back to cwd/log_dir
+    log_dir = os.path.join(os.getcwd(), "log_dir")
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Save config to a YAML file for reproducibility
+    config_save_path = os.path.join(log_dir, "config.yaml")
+    OmegaConf.save(cfg, config_save_path)
+    print(f"[INFO] Config saved to {config_save_path}")
 
     # Debug: Check dataset directory contents
     import subprocess
-    print(f"[INFO] Checking dataset directory: {args_cli.dataset_dir}")
+    dataset_dir = cfg.dataloading.dataset_dir
+    print(f"[INFO] Checking dataset directory: {dataset_dir}")
     sys.stdout.flush()
     try:
-        result = subprocess.run(['ls', args_cli.dataset_dir], capture_output=True, text=True, timeout=30)
+        result = subprocess.run(['ls', dataset_dir], capture_output=True, text=True, timeout=30)
         lines = result.stdout.strip().split('\n')
-        print(f"[INFO] ls {args_cli.dataset_dir} (first 10 lines of {len(lines)} total):")
+        print(f"[INFO] ls {dataset_dir} (first 10 lines of {len(lines)} total):")
         for line in lines[:10]:
             print(f"  {line}")
         if len(lines) > 10:
@@ -525,27 +419,30 @@ def main():
         sys.stdout.flush()
 
     # Dataset paths
-    assert args_cli.train_set is not None, f"Please specify value for arg --train_set"
-    train_set_paths = [get_most_recent_h5py_record_path(args_cli.dataset_dir, task) for task in args_cli.train_set]
-    if args_cli.test_set:
-        test_set_paths = [get_most_recent_h5py_record_path(args_cli.dataset_dir, task) for task in args_cli.test_set]
+    train_set = list(cfg.train_set)
+    test_set = list(cfg.test_set) if cfg.test_set else []
+    assert len(train_set) > 0, "Please specify train_set"
+    train_set_paths = [get_most_recent_h5py_record_path(dataset_dir, task) for task in train_set]
+    if test_set:
+        test_set_paths = [get_most_recent_h5py_record_path(dataset_dir, task) for task in test_set]
     else:
         test_set_paths = list()
         print(f'[INFO] No test set provided.')
 
     # Expand environment variables in asset_base_path (e.g., $SCRATCH)
-    asset_base_path = os.path.expandvars(args_cli.asset_base_path)
+    asset_base_path = os.path.expandvars(cfg.ablation.asset_base_path)
+    description_filename = cfg.ablation.description_filename
 
     # Training dataset
     train_dataset = LocomotionDataset(
         folder_paths=train_set_paths,
         train_mode=True,
-        val_ratio=args_cli.val_ratio,
-        max_files_in_memory=args_cli.max_files_in_memory,
-        h5_repeat_factor=args_cli.h5_repeat_factor,
-        max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
-        description_filename=args_cli.description_filename,
+        val_ratio=cfg.dataloading.val_ratio,
+        max_files_in_memory=cfg.dataloading.max_files_in_memory,
+        h5_repeat_factor=cfg.dataloading.h5_repeat_factor,
+        max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
+        max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
+        description_filename=description_filename,
         asset_base_path=asset_base_path
     )
 
@@ -553,12 +450,12 @@ def main():
     val_dataset = LocomotionDataset(
         folder_paths=train_set_paths,
         train_mode=False,
-        val_ratio=args_cli.val_ratio,
-        max_files_in_memory=args_cli.max_files_in_memory,
+        val_ratio=cfg.dataloading.val_ratio,
+        max_files_in_memory=cfg.dataloading.max_files_in_memory,
         h5_repeat_factor=1,
-        max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
-        description_filename=args_cli.description_filename,
+        max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
+        max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
+        description_filename=description_filename,
         asset_base_path=asset_base_path
     )
 
@@ -566,12 +463,12 @@ def main():
     test_dataset = LocomotionDataset(
         folder_paths=test_set_paths,
         train_mode=False,
-        val_ratio=args_cli.val_ratio,       # only use a proportion of the data as the test set
-        max_files_in_memory=args_cli.max_files_in_memory,
+        val_ratio=cfg.dataloading.val_ratio,
+        max_files_in_memory=cfg.dataloading.max_files_in_memory,
         h5_repeat_factor=1,
-        max_parallel_envs_per_file=args_cli.max_parallel_envs_per_file,
-        max_envs_per_file_in_memory=args_cli.max_envs_per_file_in_memory,
-        description_filename=args_cli.description_filename,
+        max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
+        max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
+        description_filename=description_filename,
         asset_base_path=asset_base_path
     )
 
@@ -579,32 +476,24 @@ def main():
     print(f"[INFO] Using device: {model_device}")
 
     # Determine dynamic joint description dimension
-    # Auto-detect based on whether the dataset is using limb bboxes
-    if args_cli.dynamic_joint_des_dim is not None:
-        dynamic_joint_des_dim = args_cli.dynamic_joint_des_dim
+    dynamic_joint_des_dim_cfg = cfg.ablation.dynamic_joint_des_dim
+    if dynamic_joint_des_dim_cfg is not None:
+        dynamic_joint_des_dim = dynamic_joint_des_dim_cfg
     elif train_dataset.use_limb_bboxes:
-        # 18 is the baseline, extra_des_dim is auto-detected from description file
         dynamic_joint_des_dim = 18 + train_dataset.extra_des_dim
         print(f"[INFO] Limb bboxes detected, auto-setting dynamic_joint_des_dim={dynamic_joint_des_dim} (18 base + {train_dataset.extra_des_dim} extra)")
     else:
-        dynamic_joint_des_dim = 18  # baseline
+        dynamic_joint_des_dim = 18
         print("[INFO] No limb bboxes in description file, using baseline dynamic_joint_des_dim=18")
 
     # Define model, optimizer, and loss
-    print(f"[INFO] About to load model: {args_cli.model}")
+    print("[INFO] Loading URMA model...")
     sys.stdout.flush()
     try:
-        if args_cli.model == 'urma':
-            print("[INFO] Importing urma_model.policy_3head_scale2...")
-            sys.stdout.flush()
-            from urma_model.policy_3head_scale2 import get_policy
-            print("[INFO] Import successful, calling get_policy()...")
-            sys.stdout.flush()
-            policy = get_policy(model_device, dynamic_joint_des_dim=dynamic_joint_des_dim)
-            print("[INFO] get_policy() completed successfully")
-            sys.stdout.flush()
-        else:
-            raise NotImplementedError(f'model type {args_cli.model} not implemented')
+        from urma_model.policy_3head_scale2 import get_policy
+        policy = get_policy(model_device, dynamic_joint_des_dim=dynamic_joint_des_dim)
+        print("[INFO] get_policy() completed successfully")
+        sys.stdout.flush()
     except Exception as e:
         print(f"[ERROR] Failed to load model: {e}")
         import traceback
@@ -620,19 +509,18 @@ def main():
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(
         policy.parameters(),
-        lr=args_cli.lr,
+        lr=cfg.optim.lr,
         weight_decay=1e-5,
     )
     print("[INFO] Optimizer created successfully")
     sys.stdout.flush()
 
-    # We need to get the actual iteration length by checking the dataloader, but note that the length varies
-    # for different training hyper-params. Be careful when fine-tuning models.
+    # Create dataloader to measure iteration count for scheduler
     print("[INFO] Creating train dataloader for scheduler setup...")
     sys.stdout.flush()
     try:
         train_dataloader = train_dataset.get_data_loader(
-            batch_size=args_cli.batch_size, shuffle=True, num_workers=args_cli.num_workers
+            batch_size=cfg.dataloading.batch_size, shuffle=True, num_workers=cfg.dataloading.num_workers
         )
         print(f"[INFO] Train dataloader created, length={len(train_dataloader)}")
         sys.stdout.flush()
@@ -642,10 +530,9 @@ def main():
         traceback.print_exc()
         sys.stdout.flush()
         raise
-    total_iterations = args_cli.num_epochs * len(train_dataloader)
-    if args_cli.warmup_pct > 0:
-        # Linear warmup then cosine annealing
-        warmup_iters = max(1, int(args_cli.warmup_pct * total_iterations))
+    total_iterations = cfg.optim.num_epochs * len(train_dataloader)
+    if cfg.optim.warmup_pct > 0:
+        warmup_iters = max(1, int(cfg.optim.warmup_pct * total_iterations))
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             optimizer, start_factor=1e-2, end_factor=1.0, total_iters=warmup_iters
         )
@@ -655,19 +542,19 @@ def main():
         scheduler = torch.optim.lr_scheduler.SequentialLR(
             optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[warmup_iters]
         )
-        print(f"[INFO] Scheduler created with linear warmup ({warmup_iters} iters, {args_cli.warmup_pct*100:.1f}%) + cosine annealing")
+        print(f"[INFO] Scheduler created with linear warmup ({warmup_iters} iters, {cfg.optim.warmup_pct*100:.1f}%) + cosine annealing")
     else:
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_iterations)
         print("[INFO] Scheduler created with cosine annealing (no warmup)")
     sys.stdout.flush()
 
-    # load checkpoint if path specified
-    if args_cli.resume:
-        checkpoint = torch.load(args_cli.resume, map_location="cpu")
+    # Load checkpoint if path specified
+    if cfg.resume:
+        checkpoint = torch.load(cfg.resume, map_location="cpu")
         policy.load_state_dict(checkpoint["state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         start_epoch = checkpoint["epoch"]
-        print(f"[INFO] Loaded checkpoint from {args_cli.resume}, resuming from epoch {start_epoch}")
+        print(f"[INFO] Loaded checkpoint from {cfg.resume}, resuming from epoch {start_epoch}")
     else:
         start_epoch = 0
 
@@ -683,17 +570,16 @@ def main():
             train_dataset=train_dataset,
             val_dataset=val_dataset,
             test_dataset=test_dataset,
-            num_epochs=args_cli.num_epochs,
+            num_epochs=cfg.optim.num_epochs,
             model_device=model_device,
             log_dir=log_dir,
-            checkpoint_interval=args_cli.checkpoint_interval,
-            model=args_cli.model,
-            gradient_acc_steps=args_cli.gradient_acc_steps,
-            batch_size=args_cli.batch_size,
-            num_workers=args_cli.num_workers,
-            use_amp=bool(args_cli.use_amp),
+            checkpoint_interval=cfg.optim.checkpoint_interval,
+            gradient_acc_steps=cfg.optim.gradient_acc_steps,
+            batch_size=cfg.dataloading.batch_size,
+            num_workers=cfg.dataloading.num_workers,
+            use_amp=bool(cfg.optim.use_amp),
             start_epoch=start_epoch,
-            log_epoch_pct=args_cli.log_epoch_pct
+            log_epoch_pct=cfg.optim.log_epoch_pct
         )
         print("[INFO] Training function returned successfully")
         sys.stdout.flush()
@@ -707,10 +593,7 @@ def main():
 
 @hydra.main(config_path="conf", config_name="config", version_base=None)
 def hydra_main(cfg: DictConfig):
-    """Hydra entry point for launching with hydra-submitit.
-    
-    Extracts argparse arguments from cfg.argparse and calls main().
-    """
+    """Hydra entry point."""
     # If HYDRA_SPOOF is set, we're in a submitit-unpickled process where sys.path
     # is wrong. Re-launch ourselves as a fresh subprocess from the correct directory.
     spoof_dir = os.environ.pop("HYDRA_SPOOF", None)
@@ -734,11 +617,13 @@ def hydra_main(cfg: DictConfig):
         result = subprocess.run(["bash", "-c", bash_cmd], cwd=spoof_dir)
         sys.exit(result.returncode)
 
-    sys.argv = [sys.argv[0]] + shlex.split(cfg.argparse + " " + cfg.append_argparse)
+    # Store sys.argv in meta for reproducibility
+    OmegaConf.update(cfg, "meta.sys_argv", " ".join(sys.argv), force_add=True)
+
     try:
         print("[INFO] hydra_main: Calling main()...")
         sys.stdout.flush()
-        main()
+        main(cfg)
         print("[INFO] hydra_main: main() completed successfully")
         sys.stdout.flush()
     except Exception as e:
@@ -765,18 +650,19 @@ if __name__ == "__main__":
 """
 # debugging
 ln -s /home/mila/c/charlie.gauthier/embodiment-scaling-laws/ /tmp
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml append_argparse="--max_files_in_memory 256"
+python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0
 
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml append_argparse="--max_files_in_memory 256 --num_workers 1  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 --dataset_dir /home/mila/c/charlie.gauthier/embodiment-scaling-laws/logs/rsl_rl"
+# override dataloading at CLI
+python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0 dataloading.max_files_in_memory=256
 
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 hydra.launcher.partition=long 
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=sbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=7000 hydra.launcher.gres=gpu:l40s:1 +hydra.launcher.constraint='40gb|48gb'  hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=48 hydra.launcher.array_parallelism=300 hydra.launcher.partition=main append_argparse="--max_files_in_memory 256"
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300
+# override optim group
+python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0 optim=e60_lr3e-4_acc8
+
+# multirun with SLURM
+python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0 --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000 hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300
 
 
+optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_size=8192 optim.lr=4.8e-3 optim.warmup_pct=0.05
 
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 append_argparse=" --num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 2.4e-3 "
-
-python3 distillation/run_distillation.py  --config-name  all_robot_jobs_v7_allrobots_1.0.yaml  --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=10000   hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300  append_argparse="--num_workers 2  --gradient_acc_steps 1 --h5_repeat_factor  3  --batch_size 8192 --lr 4.8e-3 --warmup_pct 0.05"
 
 """

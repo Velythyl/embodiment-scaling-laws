@@ -1,0 +1,15 @@
+project: morphoaware
+run_name: debuggingMetamorph
+tags: []
+seed: -1
+wandb_mode: online
+SLURM_JOB_ID: ${oc.env:SLURM_JOB_ID,null}
+SLURM_ARRAY_JOB_ID: ${oc.env:SLURM_ARRAY_JOB_ID,null}
+SLURM_ARRAY_TASK_ID: ${oc.env:SLURM_ARRAY_TASK_ID,null}
+HYDRA_SWEEP_DIR: ${oc.env:HYDRA_SWEEP_DIR,null}
+SLURM_HYDRA_DIR: ${oc.env:HYDRA_SWEEP_DIR,null}/${oc.env:SLURM_ARRAY_TASK_ID,null}/.hydra
+SLURM_HYDRA_OVERRIDES: ${oc.env:HYDRA_SWEEP_DIR,null}/${oc.env:SLURM_ARRAY_TASK_ID,null}/.hydra/overrides.yaml
+SLURM_TMPDIR: ${oc.env:SLURM_TMPDIR,null}
+CUDA_VISIBLE_DEVICES: ${hwinfo:gpu}
+notes: ''
+sys_argv: ''

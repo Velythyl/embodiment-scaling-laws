@@ -1,0 +1,7 @@
+lr: 0.0003
+num_epochs: 10
+gradient_acc_steps: 1
+warmup_pct: 0.0
+use_amp: false
+checkpoint_interval: 5
+log_epoch_pct: 2.0

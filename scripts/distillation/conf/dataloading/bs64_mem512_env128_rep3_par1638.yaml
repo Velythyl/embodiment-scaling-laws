@@ -1,0 +1,8 @@
+batch_size: 64
+num_workers: 0
+max_files_in_memory: 512
+max_parallel_envs_per_file: 1638
+max_envs_per_file_in_memory: 128
+h5_repeat_factor: 3
+val_ratio: 0.15
+dataset_dir: /tmp/embodiment-scaling-laws/logs/rsl_rl

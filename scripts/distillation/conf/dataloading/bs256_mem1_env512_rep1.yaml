@@ -1,0 +1,8 @@
+batch_size: 256
+num_workers: 0
+max_files_in_memory: 1
+max_parallel_envs_per_file: 2048
+max_envs_per_file_in_memory: 512
+h5_repeat_factor: 1
+val_ratio: 0.15
+dataset_dir: logs/rsl_rl

@@ -17,7 +17,7 @@ try:
     if os.path.exists("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"):
         os.chdir("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts")
 except Exception as e:
-    print(f"[ERROR] Failed to change directory: {e}")
+    print(f"[WARNING] Failed to change directory: {e}")
 from utility_functions import (get_most_recent_h5py_record_path, save_checkpoint, AverageMeter,
                    compute_gradient_norm, get_process_ram_usage, get_system_ram_usage)
 from dataset_functions import LocomotionDataset
@@ -77,12 +77,11 @@ def set_seed(seed):
     random.seed(seed)  # Set Python's random seed
     np.random.seed(seed)  # Set NumPy's random seed
     torch.manual_seed(seed)  # Set PyTorch's CPU seed
-    torch.cuda.manual_seed(seed)  # Set PyTorch's GPU seed (if using CUDA)
-    torch.cuda.manual_seed_all(seed)  # Set the seed for all GPUs (if using multiple GPUs)
-    torch.backends.cudnn.deterministic = True  # Ensure deterministic behavior
-    torch.backends.cudnn.benchmark = True  # Disable optimizations for reproducibility
-
-set_seed(0)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)  # Set PyTorch's GPU seed (if using CUDA)
+        torch.cuda.manual_seed_all(seed)  # Set the seed for all GPUs (if using multiple GPUs)
+        torch.backends.cudnn.deterministic = True  # Ensure deterministic behavior
+        torch.backends.cudnn.benchmark = True  # Disable optimizations for reproducibility
 
 
 def get_meter_dict_avg(meter_dicts):
@@ -660,6 +659,12 @@ python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobo
 
 
 optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_size=8192 optim.lr=4.8e-3 optim.warmup_pct=0.05
+
+
+
+## exps
+
+python3 distillation/run_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0 --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319 hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_size=8192 optim.lr=4.8e-3 optim.warmup_pct=0.05 ablation=no_bboxes,bboxes
 
 
 """

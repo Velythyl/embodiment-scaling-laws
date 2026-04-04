@@ -897,6 +897,16 @@ class LocomotionDataset(Dataset):
             (f"the number of samples for workers differ: {[len(samples) for samples in samples_per_worker]}"
              f"This function assumes all files have the same number of samples. Is this true?")
 
+        # Shuffle the lane→worker mapping so that the interleave order is
+        # randomised each epoch (matching the original per-cycle shuffle
+        # behaviour) while keeping every worker's batches on the same lane
+        # for cache locality.  With num_workers <= 1 the per-cycle shuffle
+        # below already provides this randomness.
+        if shuffle and num_workers > 1:
+            perm = list(range(len(samples_per_worker)))
+            random.shuffle(perm)
+            samples_per_worker = [samples_per_worker[p] for p in perm]
+
         # Interleave batches from all workers to form the final sequence
         final_samples = []
         max_samples_per_worker = max(len(worker_samples) for worker_samples in samples_per_worker)
@@ -905,9 +915,10 @@ class LocomotionDataset(Dataset):
             for worker_idx, samples in enumerate(samples_per_worker):
                 cycle_samples.append(samples[i])
             
-            # Only shuffle within a cycle when num_workers <= 1 (single-process mode).
-            # With actual DataLoader workers, PyTorch assigns batches round-robin by position,
-            # so shuffling here destroys worker↔lane alignment and causes cache misses.
+            # Shuffle within a cycle in single-process mode (original behaviour).
+            # With multiple DataLoader workers, lane→worker permutation above
+            # provides the randomness instead; per-cycle shuffle would break
+            # worker↔lane alignment and cause cache misses.
             if shuffle and num_workers <= 1:
                 random.shuffle(cycle_samples)
 

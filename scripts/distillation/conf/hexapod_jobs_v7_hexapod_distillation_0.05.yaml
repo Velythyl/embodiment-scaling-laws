@@ -5,7 +5,7 @@ defaults:
   - meta: default
   - optim: e80_lr3e-4_acc8
   - dataloading: bs64_mem64_env128_rep3
-  - ablation: default
+  - ablation: no_bboxes
   - _self_
   - secrets: secrets
 

@@ -1,5 +1,5 @@
-project: morphoaware
-run_name: debuggingMetamorph
+project: esl_apr4
+run_name: experiment
 tags: []
 seed: -1
 wandb_mode: online

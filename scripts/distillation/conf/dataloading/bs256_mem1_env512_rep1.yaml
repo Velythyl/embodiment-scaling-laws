@@ -1,5 +1,5 @@
 batch_size: 256
-num_workers: 0
+num_workers: 2
 max_files_in_memory: 1
 max_parallel_envs_per_file: 2048
 max_envs_per_file_in_memory: 512

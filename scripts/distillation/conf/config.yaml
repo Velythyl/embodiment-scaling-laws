@@ -6,7 +6,7 @@ defaults:
   - meta: default
   - optim: e10_lr3e-4_acc1
   - dataloading: bs256_mem1_env512_rep1
-  - ablation: default
+  - ablation: no_bboxes
   - _self_
   - secrets: secrets
 

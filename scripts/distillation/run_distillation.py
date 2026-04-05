@@ -377,10 +377,13 @@ def main(cfg: DictConfig):
     # Initialize wandb
     wandb_mode = cfg.meta.wandb_mode
     if wandb_mode != "disabled":
+        from hydra.core.hydra_config import HydraConfig
+        wandb_config = OmegaConf.to_container(cfg, resolve=True)
+        wandb_config["meta"]["config_name"] = HydraConfig.get().job.config_name
         wandb.init(
             project=cfg.meta.project,
             name=cfg.meta.run_name,
-            config=OmegaConf.to_container(cfg, resolve=True),
+            config=wandb_config,
             mode=wandb_mode,
             tags=list(cfg.meta.tags) if cfg.meta.tags else None,
             notes=cfg.meta.notes or None,

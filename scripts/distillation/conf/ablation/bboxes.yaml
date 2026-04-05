@@ -1,2 +1,3 @@
 description_filename: robot_description_vec_with_bboxes.json
 asset_base_path: ${oc.env:SCRATCH,}/embodiment-scaling-laws/exts/embodiment_scaling_laws/embodiment_scaling_laws/assets/Robots/GenBot1K-v7
+name: gt_bboxes

@@ -103,4 +103,6 @@ optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_siz
 python3 distillation/launch_distillation.py --config-name all_robot_jobs_v7_allrobots_1.0 --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319 hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_size=8192 optim.lr=4.8e-3 optim.warmup_pct=0.05 ablation=no_bboxes,bboxes
 
 
+ python3 distillation/launch_distillation.py --config-name all_robot_jobs_v7_allrobots_0.05 --multirun hydra/launcher=firsbatch +hydra/sweep=sbatch hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher hydra.launcher.tasks_per_node=1 +hydra.launcher.timeout_min=4319 hydra.launcher.cpus_per_task=6 hydra.launcher.mem_gb=128 hydra.launcher.array_parallelism=300 optim.gradient_acc_steps=1 dataloading.h5_repeat_factor=3  dataloading.batch_size=8192 optim.lr=4.8e-3 optim.warmup_pct=0.05 ablation=no_bboxes,bboxes meta.project=esl_apr4_2
+
 """

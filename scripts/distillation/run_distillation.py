@@ -419,20 +419,40 @@ def main(cfg: DictConfig):
         print(f"[ERROR] Failed to ls dataset directory: {e}")
         sys.stdout.flush()
 
+    # Expand environment variables in asset_base_path (e.g., $SCRATCH)
+    asset_base_path = os.path.expandvars(cfg.ablation.asset_base_path)
+    description_filename = cfg.ablation.description_filename
+
+    # Resolve fallback dataset directory (may contain env vars like $SCRATCH)
+    fallback_dataset_dir = getattr(cfg.dataloading, 'fallback_dataset_dir', None)
+    if fallback_dataset_dir:
+        fallback_dataset_dir = os.path.expandvars(fallback_dataset_dir)
+        print(f"[INFO] Fallback dataset directory: {fallback_dataset_dir}")
+
+    fallback_count = 0
+    def _resolve_h5py_path(task):
+        """Try primary dataset_dir first, fall back to fallback_dataset_dir."""
+        nonlocal fallback_count
+        try:
+            return get_most_recent_h5py_record_path(dataset_dir, task)
+        except FileNotFoundError:
+            if fallback_dataset_dir:
+                fallback_count += 1
+                return get_most_recent_h5py_record_path(fallback_dataset_dir, task)
+            raise
+
     # Dataset paths
     train_set = list(cfg.train_set)
     test_set = list(cfg.test_set) if cfg.test_set else []
     assert len(train_set) > 0, "Please specify train_set"
-    train_set_paths = [get_most_recent_h5py_record_path(dataset_dir, task) for task in train_set]
+    train_set_paths = [_resolve_h5py_path(task) for task in train_set]
     if test_set:
-        test_set_paths = [get_most_recent_h5py_record_path(dataset_dir, task) for task in test_set]
+        test_set_paths = [_resolve_h5py_path(task) for task in test_set]
     else:
         test_set_paths = list()
         print(f'[INFO] No test set provided.')
-
-    # Expand environment variables in asset_base_path (e.g., $SCRATCH)
-    asset_base_path = os.path.expandvars(cfg.ablation.asset_base_path)
-    description_filename = cfg.ablation.description_filename
+    if fallback_count > 0:
+        print(f"[INFO] {fallback_count}/{len(train_set) + len(test_set)} tasks resolved from fallback directory")
 
     # Training dataset
     train_dataset = LocomotionDataset(
@@ -444,7 +464,9 @@ def main(cfg: DictConfig):
         max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
         description_filename=description_filename,
-        asset_base_path=asset_base_path
+        asset_base_path=asset_base_path,
+        dataset_dir=dataset_dir,
+        fallback_dataset_dir=fallback_dataset_dir,
     )
 
     # Validation dataset
@@ -457,7 +479,9 @@ def main(cfg: DictConfig):
         max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
         description_filename=description_filename,
-        asset_base_path=asset_base_path
+        asset_base_path=asset_base_path,
+        dataset_dir=dataset_dir,
+        fallback_dataset_dir=fallback_dataset_dir,
     )
 
     # Test dataset
@@ -470,7 +494,9 @@ def main(cfg: DictConfig):
         max_parallel_envs_per_file=cfg.dataloading.max_parallel_envs_per_file,
         max_envs_per_file_in_memory=cfg.dataloading.max_envs_per_file_in_memory,
         description_filename=description_filename,
-        asset_base_path=asset_base_path
+        asset_base_path=asset_base_path,
+        dataset_dir=dataset_dir,
+        fallback_dataset_dir=fallback_dataset_dir,
     )
 
     model_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

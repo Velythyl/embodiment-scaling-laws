@@ -6,3 +6,4 @@ max_envs_per_file_in_memory: 128
 h5_repeat_factor: 3
 val_ratio: 0.15
 dataset_dir: /tmp/embodiment-scaling-laws/logs/rsl_rl
+fallback_dataset_dir: ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl

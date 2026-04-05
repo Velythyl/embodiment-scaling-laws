@@ -156,7 +156,8 @@ class LocomotionDataset(Dataset):
 
     def __init__(self, folder_paths, max_files_in_memory, train_mode, val_ratio, h5_repeat_factor,
                  max_parallel_envs_per_file, max_envs_per_file_in_memory,
-                 description_filename: str = None, asset_base_path: str = None):
+                 description_filename: str = None, asset_base_path: str = None,
+                 dataset_dir: str = None, fallback_dataset_dir: str = None):
         """
         Initialize the LocomotionDataset.
 
@@ -196,6 +197,11 @@ class LocomotionDataset(Dataset):
         self.val_ratio = val_ratio
         self.h5_repeat_factor = h5_repeat_factor
         self.total_samples = 0
+
+        # Fallback dataset directory for loading from $SCRATCH when local copy is corrupted/truncated
+        self.dataset_dir = dataset_dir
+        self.fallback_dataset_dir = fallback_dataset_dir
+        self._fallback_count = 0  # track how many times fallback was used
 
         # Robot description parameters for limb shape conditioning
         self.description_filename = description_filename
@@ -476,9 +482,37 @@ class LocomotionDataset(Dataset):
               "which might not reflect the actual samples used in one epoch due to resampling")
         return self.total_samples
 
+    def _read_h5(self, file_path, env_start_idx):
+        """Read inputs and targets from an HDF5 file."""
+        with h5py.File(file_path, "r") as data_file:
+            inputs = np.array(data_file["one_policy_observation"][:, env_start_idx:env_start_idx+self.max_envs_per_file_in_memory])
+            targets = np.array(data_file["actions"][:, env_start_idx:env_start_idx+self.max_envs_per_file_in_memory])
+        return inputs, targets
+
+    _DATASET_PATH_ANCHOR = "/embodiment-scaling-laws/logs/rsl_rl"
+
+    def _get_fallback_path(self, file_path):
+        """Convert a primary dataset path to the fallback dataset path.
+
+        Splits on the known anchor '/embodiment-scaling-laws/logs/rsl_rl' and
+        re-roots the remainder under fallback_dataset_dir.
+        E.g. /tmp/embodiment-scaling-laws/logs/rsl_rl/Gendog10_.../file.h5
+          -> $SCRATCH/embodiment-scaling-laws/logs/rsl_rl/Gendog10_.../file.h5
+        """
+        if not self.fallback_dataset_dir:
+            return None
+        anchor = self._DATASET_PATH_ANCHOR
+        idx = file_path.find(anchor)
+        if idx == -1:
+            return None
+        remainder = file_path[idx + len(anchor):]
+        return os.path.join(self.fallback_dataset_dir, remainder.lstrip("/"))
+
     def _load_file(self, folder_idx, file_idx, env_start_idx):
         """
         Load a specific HDF5 file into memory.
+        Falls back to fallback_dataset_dir if the primary load fails (e.g. truncated file).
+        Retry schedule for fallback: immediate, then 30s, then 60s, then hard exit.
 
         Args:
             folder_idx (int): Index of the folder.
@@ -487,22 +521,41 @@ class LocomotionDataset(Dataset):
         Returns:
             tuple: (inputs, targets) from the HDF5 file.
         """
-        # print('loading', (folder_idx, file_idx, env_start_idx))
         folder_path, file_name, steps_per_file, parallel_envs = self.file_indices[(folder_idx, file_idx, env_start_idx)]
         file_path = os.path.join(folder_path, file_name)
-        # print(f"[INFO]: Loading file {file_path}")
 
-        with h5py.File(file_path, "r") as data_file:
-            inputs = np.array(data_file["one_policy_observation"][:, env_start_idx:env_start_idx+self.max_envs_per_file_in_memory])
-            targets = np.array(data_file["actions"][:, env_start_idx:env_start_idx+self.max_envs_per_file_in_memory])
+        # Try primary path first
+        try:
+            inputs, targets = self._read_h5(file_path, env_start_idx)
+        except OSError as primary_err:
+            fallback_path = self._get_fallback_path(file_path)
+            if fallback_path is None:
+                raise  # No fallback configured, re-raise original error
+
+            # Retry schedule: attempt 1 = immediate, attempt 2 = 30s, attempt 3 = 60s
+            backoff_delays = [0, 30, 60]
+            inputs, targets = None, None
+            for attempt, delay in enumerate(backoff_delays, start=1):
+                if delay > 0:
+                    time.sleep(delay)
+                try:
+                    inputs, targets = self._read_h5(fallback_path, env_start_idx)
+                    self._fallback_count += 1
+                    break
+                except OSError:
+                    pass
+
+            if inputs is None:
+                raise RuntimeError(
+                    f"[FATAL] All 3 fallback attempts failed for {fallback_path}. "
+                    f"Original error: {primary_err}."
+                )
 
         # Validate shapes
         if inputs.shape != (steps_per_file, self.max_envs_per_file_in_memory, inputs.shape[-1]):
             raise ValueError(f"[ERROR]: Input shape mismatch in file {file_path}.")
         if targets.shape != (steps_per_file, self.max_envs_per_file_in_memory, targets.shape[-1]):
             raise ValueError(f"[ERROR]: Target shape mismatch in file {file_path}.")
-
-        del folder_path, file_name, steps_per_file, parallel_envs
 
         return inputs, targets
 
@@ -987,7 +1040,7 @@ class LocomotionDataset(Dataset):
         first_file_key = next(iter(self.file_indices))
         _, _, est_steps, _ = self.file_indices[first_file_key]
         est_batches_per_file = max(1, (est_steps * self.max_envs_per_file_in_memory * self.h5_repeat_factor) // batch_size)
-        PREFETCH_LOOKAHEAD = max(50, est_batches_per_file * (MAX_PREFETCH_FILES + 1))
+        PREFETCH_LOOKAHEAD = min(100, max(50, est_batches_per_file * (MAX_PREFETCH_FILES + 1)))
         print(f"[DATALOADER] Prefetch config: est_batches_per_file={est_batches_per_file}, "
               f"PREFETCH_LOOKAHEAD={PREFETCH_LOOKAHEAD}, MAX_PREFETCH_FILES={MAX_PREFETCH_FILES}", flush=True)
 

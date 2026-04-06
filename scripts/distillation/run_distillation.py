@@ -172,6 +172,10 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 forward_time = time.time() - start_time
 
                 # Backward pass and optimization
+                # BUG: loss is NOT divided by gradient_acc_steps before .backward().
+                # When gradient_acc_steps > 1, accumulated gradients are gradient_acc_steps times
+                # larger than a single equivalent large batch. This means the effective learning
+                # rate is lr * gradient_acc_steps. To fix, use (loss / gradient_acc_steps).backward().
                 start_time = time.time()
 
                 if use_amp:

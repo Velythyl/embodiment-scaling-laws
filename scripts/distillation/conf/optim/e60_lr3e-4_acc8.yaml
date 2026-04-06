@@ -1,5 +1,9 @@
 lr: 0.0003
 num_epochs: 60
+# BUG: gradient_acc_steps > 1 does NOT divide loss by gradient_acc_steps before .backward().
+# This means the effective LR is actually lr * gradient_acc_steps (e.g. 0.0003 * 8 = 0.0024).
+# A batch_size=64 with gradient_acc_steps=8 is NOT equivalent to batch_size=512 with acc=1;
+# it behaves like batch_size=512 with acc=1 and lr scaled up 8x.
 gradient_acc_steps: 8
 warmup_pct: 0.0
 use_amp: false

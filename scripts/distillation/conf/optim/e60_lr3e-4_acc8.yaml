@@ -1,3 +1,4 @@
+optimizer: adamw  # adamw or lamb
 lr: 0.0003
 num_epochs: 60
 # BUG: gradient_acc_steps > 1 does NOT divide loss by gradient_acc_steps before .backward().

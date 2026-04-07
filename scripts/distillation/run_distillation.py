@@ -535,12 +535,24 @@ def main(cfg: DictConfig):
     print("[INFO] Setting up criterion and optimizer...")
     sys.stdout.flush()
     criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.AdamW(
-        policy.parameters(),
-        lr=cfg.optim.lr,
-        weight_decay=1e-5,
-    )
-    print("[INFO] Optimizer created successfully")
+
+    optimizer_name = getattr(cfg.optim, "optimizer", "adamw").lower()
+    if optimizer_name == "adamw":
+        optimizer = torch.optim.AdamW(
+            policy.parameters(),
+            lr=cfg.optim.lr,
+            weight_decay=1e-5,
+        )
+    elif optimizer_name == "lamb":
+        from lamb_optimizer import Lamb
+        optimizer = Lamb(
+            policy.parameters(),
+            lr=cfg.optim.lr,
+            weight_decay=1e-5,
+        )
+    else:
+        raise ValueError(f"Unknown optimizer: {optimizer_name}. Supported: adamw, lamb")
+    print(f"[INFO] Optimizer created successfully: {optimizer_name}")
     sys.stdout.flush()
 
     # Create dataloader to measure iteration count for scheduler

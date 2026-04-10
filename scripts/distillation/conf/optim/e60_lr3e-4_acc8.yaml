@@ -10,3 +10,4 @@ warmup_pct: 0.0
 use_amp: false
 checkpoint_interval: 5
 log_epoch_pct: 2.0
+eval_epoch_pct: 25.0  # Set to e.g. 25.0 to run val/test every 25% of epoch; null = end-of-epoch only

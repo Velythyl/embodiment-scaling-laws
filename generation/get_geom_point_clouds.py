@@ -201,51 +201,50 @@ def get_link_transform(urdf: URDF, link_name: str, joint_positions: Dict[str, fl
 def build_articulated_parts(urdf: URDF) -> Dict[str, List[str]]:
     """
     Group links into articulated parts based on joint types.
-    Links connected by fixed joints are grouped together.
-    The part is named after the first actuated joint leading to it.
+    
+    For each actuated joint, its part includes:
+    - The direct child link of that joint
+    - All descendant links connected via fixed joints
+    - Stops at the next actuated joint (which starts a new part)
+    
+    Uses downward traversal from root to ensure each joint "grabs" all
+    descendant parts until hitting the next actuation.
     
     Returns:
         Dict mapping part name to list of link names in that part.
     """
-    # Build parent-child relationships
-    link_to_parent_joint = {}
+    # Build parent -> [(joint, child_link), ...] relationships for downward traversal
+    link_children = defaultdict(list)
     for joint in urdf.joints:
-        link_to_parent_joint[joint.child] = joint
+        link_children[joint.parent].append((joint, joint.child))
     
-    # Find the root link (no parent joint)
+    # Find root links (links that are not a child of any joint)
     all_children = {joint.child for joint in urdf.joints}
     root_links = [link.name for link in urdf.links if link.name not in all_children]
     
-    # For each link, trace back to find the last non-fixed joint
-    link_to_part = {}
-    
-    def get_part_name(link_name: str) -> str:
-        """Get the part name for a link by tracing back through joints."""
-        if link_name in root_links:
-            return "trunk"  # Root part
-        
-        current = link_name
-        last_actuated_joint = None
-        
-        while current in link_to_parent_joint:
-            joint = link_to_parent_joint[current]
-            if joint.joint_type != 'fixed':
-                last_actuated_joint = joint.name
-                break
-            current = joint.parent
-        
-        if last_actuated_joint is None:
-            # All joints to root are fixed, link belongs to trunk
-            return "trunk"
-        
-        return last_actuated_joint
-    
-    # Group links by part
     parts = defaultdict(list)
-    for link in urdf.links:
-        part_name = get_part_name(link.name)
-        parts[part_name].append(link.name)
-        link_to_part[link.name] = part_name
+    
+    def collect_descendants(link_name: str, current_part: str):
+        """
+        Recursively traverse downward from a link, collecting descendants into parts.
+        
+        - If we cross a fixed joint, the child stays in the current part
+        - If we cross an actuated joint, the child starts a new part named after that joint
+        """
+        for joint, child_link in link_children[link_name]:
+            if joint.joint_type == 'fixed':
+                # Fixed joint: child belongs to same part as parent
+                parts[current_part].append(child_link)
+                collect_descendants(child_link, current_part)
+            else:
+                # Actuated joint: child starts a new part named after this joint
+                parts[joint.name].append(child_link)
+                collect_descendants(child_link, joint.name)
+    
+    # Start traversal from root links
+    for root in root_links:
+        parts[">NO_ACTUATORS<"].append(root)
+        collect_descendants(root, ">NO_ACTUATORS<")
     
     return dict(parts)
 
@@ -358,8 +357,8 @@ def extract_point_clouds(
             # Get link transform
             link_transform = link_transforms.get(link_name, np.eye(4))
             
-            # Process visual geometries (prefer visual over collision for point clouds)
-            geometries = link.visuals if link.visuals else link.collisions
+            # Prefer collision geometries over visual meshes for point clouds
+            geometries = link.collisions if link.collisions else link.visuals
             
             for geom in geometries:
                 # Create mesh from geometry
@@ -419,19 +418,21 @@ def extract_point_clouds(
     }
     
     # Individual parts (store color and optionally points)
+    # Only include parts that actually have points in the full point cloud
     for part_name in part_names:
+        points = part_point_clouds.get(part_name, np.array([]).reshape(0, 3))
+        if len(points) == 0:
+            continue
         part_entry = {
             "color": part_colors[part_name]
         }
         if store_per_part_points:
-            points = part_point_clouds.get(part_name, np.array([]).reshape(0, 3))
             part_entry["pcd_points"] = points.tolist()
         output[part_name] = part_entry
     
-    # >NO_ACTUATORS< - for links with no actuators (using black color)
-    output[">NO_ACTUATORS<"] = {
-        "color": [0, 0, 0]
-    }
+    # Note: >NO_ACTUATORS< is intentionally omitted as it has no points
+    # in the full point cloud, and including it would break downstream
+    # assertions that every part's color appears in the point cloud.
     
     return output
 

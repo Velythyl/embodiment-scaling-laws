@@ -116,9 +116,40 @@ def reweight_loss(loss, data_source_name):
     return loss
 
 
+def _run_eval(policy, criterion, dataloader, model_device, loss_meters, phase_name, epoch, num_epochs, sample_pct=0.03):
+    """Run a validation or test evaluation pass, sampling sample_pct of the dataloader."""
+    policy.eval()
+    for meter in loss_meters.values():
+        meter.reset()
+
+    with torch.no_grad():
+        phase_start_time = time.time()
+        prefetcher = CudaPrefetcher(dataloader, model_device)
+        max_batches = max(1, int(sample_pct * len(dataloader)))
+        with tqdm.tqdm(prefetcher, total=len(dataloader), desc=f"{phase_name} Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
+            for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
+                batch_predictions = policy(*batch_inputs)
+                loss = criterion(batch_predictions, batch_targets)
+
+                if data_source_name not in loss_meters:
+                    loss_meters[data_source_name] = AverageMeter()
+                loss_meters[data_source_name].update(loss.item(), n=batch_targets.size(0))
+
+                pbar.set_postfix({"Loss": f"{get_meter_dict_avg(loss_meters) or 0:.4f}"})
+
+                if index >= max_batches:
+                    break
+
+        avg_loss = get_meter_dict_avg(loss_meters)
+        bps = (index + 1) / (time.time() - phase_start_time) if index >= 0 else 0
+        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - {phase_name} complete | Avg Loss: {avg_loss if avg_loss is not None else 'N/A'} | {bps:.2f} batch/s")
+
+    return avg_loss
+
+
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
           log_dir, checkpoint_interval, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
-          log_epoch_pct=10.0):
+          log_epoch_pct=10.0, eval_epoch_pct=None):
     """Training loop with validation, TensorBoard logging, and checkpoint saving."""
     scaler = torch.cuda.amp.GradScaler()
 
@@ -143,6 +174,18 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             batch_size=batch_size, shuffle=True, num_workers=num_workers
         )
         print(f"[TIMING] DataLoader creation took {time.time() - _dl_create_start:.1f}s", flush=True)
+
+        # Create val/test dataloaders once per epoch for mid-epoch evaluation
+        if eval_epoch_pct is not None and eval_epoch_pct > 0:
+            val_dataloader = val_dataset.get_data_loader(
+                batch_size=batch_size, shuffle=True, num_workers=num_workers
+            )
+            test_dataloader = None
+            if len(test_dataset) > 0:
+                test_dataloader = test_dataset.get_data_loader(
+                    batch_size=batch_size, shuffle=True, num_workers=num_workers, prefetch_factor=25
+                )
+            next_eval_pct = eval_epoch_pct
 
         prefetcher = CudaPrefetcher(train_dataloader, model_device)
         with tqdm.tqdm(prefetcher, total=len(train_dataloader), desc=f"Training Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
@@ -237,6 +280,38 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     train_bps = (index + 1) / (time.time() - train_phase_start_time)
                     print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {current_pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
 
+                # Mid-epoch validation/test evaluation
+                if eval_epoch_pct is not None and eval_epoch_pct > 0 and current_pct >= next_eval_pct:
+                    next_eval_pct = current_pct - (current_pct % eval_epoch_pct) + eval_epoch_pct
+                    epoch_progress = epoch + (index + 1) / len(train_dataloader)
+                    print(f"[INFO] Mid-epoch eval at {current_pct:.1f}% of epoch {epoch + 1}")
+
+                    # Validation
+                    val_avg = _run_eval(policy, criterion, val_dataloader, model_device,
+                                        val_loss_meters, "Validation", epoch, num_epochs)
+                    eval_log_dict = {"epoch_progress": epoch_progress}
+                    eval_log_dict.update({f"Val-Per-Robot/{rn}": m.avg for rn, m in val_loss_meters.items() if m.count > 0})
+                    if val_avg is not None:
+                        eval_log_dict["Val/epoch-loss/avg"] = val_avg
+
+                    # Test
+                    if test_dataloader is not None:
+                        test_avg = _run_eval(policy, criterion, test_dataloader, model_device,
+                                             test_loss_meters, "Test", epoch, num_epochs)
+                        eval_log_dict.update({f"Test-Per-Robot/{rn}": m.avg for rn, m in test_loss_meters.items() if m.count > 0})
+                        if test_avg is not None:
+                            eval_log_dict["Test/epoch-loss/avg"] = test_avg
+
+                    wandb.log(eval_log_dict)
+
+                    # Save best model based on mid-epoch val loss
+                    if val_avg is not None and val_avg < best_val_loss:
+                        best_val_loss = val_avg
+                        save_checkpoint(policy, optimizer, epoch + 1, log_dir, is_best=True)
+
+                    # Switch back to training mode
+                    policy.train()
+
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
                     scheduler.step()
@@ -255,93 +330,36 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         del train_dataloader
         print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train complete | Avg Loss: {get_meter_dict_avg(train_loss_meters):.4f} | {train_total_bps:.2f} batch/s")
 
-        # Validation phase
-        policy.eval()
-        for meter in val_loss_meters.values():
-            meter.reset()
-        print(f"[INFO] Starting epoch {epoch + 1}/{num_epochs} - Validation.")
+        # Clean up mid-epoch eval dataloaders
+        if eval_epoch_pct is not None and eval_epoch_pct > 0:
+            del val_dataloader
+            if test_dataloader is not None:
+                del test_dataloader
 
-        val_dataloader = val_dataset.get_data_loader(
-            batch_size=batch_size, shuffle=True, num_workers=num_workers
-        )
+        # End-of-epoch Validation phase
+        val_avg = _run_eval(policy, criterion,
+                            val_dataset.get_data_loader(batch_size=batch_size, shuffle=True, num_workers=num_workers),
+                            model_device, val_loss_meters, "Validation", epoch, num_epochs)
 
-        with torch.no_grad():
-            val_phase_start_time = time.time()
-            val_prefetcher = CudaPrefetcher(val_dataloader, model_device)
-            with tqdm.tqdm(val_prefetcher, total=len(val_dataloader), desc=f"Validation Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
-                for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
-
-                    batch_predictions = policy(*batch_inputs)
-
-                    loss = criterion(batch_predictions, batch_targets)
-
-                    # Update validation loss tracker
-                    if data_source_name not in val_loss_meters:
-                        val_loss_meters[data_source_name] = AverageMeter()
-                    val_loss_meters[data_source_name].update(loss.item(), n=batch_targets.size(0))
-
-                    # Update progress bar with current loss
-                    pbar.set_postfix(
-                        {"Loss": f"{get_meter_dict_avg(val_loss_meters) or 0:.4f}"})
-
-                    if index > 0.03 * len(val_dataloader):
-                        break
-
-        # Collect validation metrics (skip robots not seen in this epoch's sample)
         val_log_dict = {f"Val-Per-Robot/{robot_name}": meter.avg for robot_name, meter in val_loss_meters.items() if meter.count > 0}
-        val_avg = get_meter_dict_avg(val_loss_meters)
         if val_avg is not None:
             val_log_dict["Val/epoch-loss/avg"] = val_avg
         epoch_log_dict.update(val_log_dict)
-        val_total_bps = (index + 1) / (time.time() - val_phase_start_time)
-        print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Val complete | Avg Loss: {val_avg if val_avg is not None else 'N/A'} | {val_total_bps:.2f} batch/s")
 
-        del val_dataloader
         if epoch == 0:
+            wandb.log(epoch_log_dict)
             continue
 
         if len(test_dataset) > 0:
             # Test phase
-            for meter in test_loss_meters.values():
-                meter.reset()
-            print(f"[INFO] Starting epoch {epoch + 1}/{num_epochs} - Test.")
+            test_avg = _run_eval(policy, criterion,
+                                 test_dataset.get_data_loader(batch_size=batch_size, shuffle=True, num_workers=num_workers, prefetch_factor=25),
+                                 model_device, test_loss_meters, "Test", epoch, num_epochs)
 
-            test_dataloader = test_dataset.get_data_loader(
-                batch_size=batch_size, shuffle=True, num_workers=num_workers, prefetch_factor=25
-            )
-
-            with torch.no_grad():
-                test_phase_start_time = time.time()
-                test_prefetcher = CudaPrefetcher(test_dataloader, model_device)
-                with tqdm.tqdm(test_prefetcher, total=len(test_dataloader), desc=f"Test Epoch {epoch + 1}/{num_epochs}", unit="batch") as pbar:
-                    for index, (batch_inputs, batch_targets, data_source_name, _, _) in enumerate(pbar):
-
-                        batch_predictions = policy(*batch_inputs)
-
-                        loss = criterion(batch_predictions, batch_targets)
-
-                        # Update validation loss tracker
-                        if data_source_name not in test_loss_meters:
-                            test_loss_meters[data_source_name] = AverageMeter()
-                        test_loss_meters[data_source_name].update(loss.item(), n=batch_targets.size(0))
-
-                        # Update progress bar with current loss
-                        pbar.set_postfix(
-                            {"Loss": f"{get_meter_dict_avg(test_loss_meters) or 0:.4f}"})
-
-                        if index > 0.03 * len(test_dataloader):
-                            break
-
-            # Collect test metrics (skip robots not seen in this epoch's sample)
             test_log_dict = {f"Test-Per-Robot/{robot_name}": meter.avg for robot_name, meter in test_loss_meters.items() if meter.count > 0}
-            test_avg = get_meter_dict_avg(test_loss_meters)
             if test_avg is not None:
                 test_log_dict["Test/epoch-loss/avg"] = test_avg
             epoch_log_dict.update(test_log_dict)
-            test_total_bps = (index + 1) / (time.time() - test_phase_start_time)
-            print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Test complete | Avg Loss: {test_avg if test_avg is not None else 'N/A'} | {test_total_bps:.2f} batch/s")
-
-            del test_dataloader
 
         # Log all metrics for this epoch in a single wandb.log call
         wandb.log(epoch_log_dict)
@@ -359,6 +377,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {get_meter_dict_avg(train_loss_meters):.6f}, "
               f"Val Loss: {val_avg if val_avg is not None else 'N/A'}, Best Val Loss: {best_val_loss:.6f}, "
               f"Test Loss: {test_avg_display if test_avg_display is not None else 'N/A'}")
+
+        # Switch back to train mode for next epoch
+        policy.train()
 
     if wandb.run is not None:
         wandb.finish()
@@ -395,8 +416,13 @@ def main(cfg: DictConfig):
         print(f"[INFO] Wandb initialized (mode={wandb_mode})")
 
     # Use wandb's run directory for logging, fall back to cwd/log_dir
-    log_dir = os.path.join(os.getcwd(), "log_dir")
+    if wandb.run is not None:
+        log_dir = wandb.run.dir
+        print(f"[INFO] Wandb run directory: {log_dir}")
+    else:
+        log_dir = os.path.join(os.getcwd(), "log_dir")
     os.makedirs(log_dir, exist_ok=True)
+    print(f"[INFO] Checkpoints will be saved to {log_dir}")
 
     # Save config to a YAML file for reproducibility
     config_save_path = os.path.join(log_dir, "config.yaml")
@@ -528,6 +554,7 @@ def main(cfg: DictConfig):
         traceback.print_exc()
         sys.stdout.flush()
         raise
+    policy = torch.compile(policy, mode="reduce-overhead", dynamic=True)
 
     print('policy architecture:\n', policy)
     sys.stdout.flush()
@@ -597,6 +624,9 @@ def main(cfg: DictConfig):
         print(f"[INFO] Loaded checkpoint from {cfg.resume}, resuming from epoch {start_epoch}")
     else:
         start_epoch = 0
+        # Save initial (untrained) policy
+        save_checkpoint(policy, optimizer, 0, log_dir)
+        print(f"[INFO] Initial policy saved to {log_dir}")
 
     # Train the policy
     print(f"[INFO] About to start training from epoch {start_epoch}...")
@@ -619,7 +649,8 @@ def main(cfg: DictConfig):
             num_workers=cfg.dataloading.num_workers,
             use_amp=bool(cfg.optim.use_amp),
             start_epoch=start_epoch,
-            log_epoch_pct=cfg.optim.log_epoch_pct
+            log_epoch_pct=cfg.optim.log_epoch_pct,
+            eval_epoch_pct=getattr(cfg.optim, 'eval_epoch_pct', None)
         )
         print("[INFO] Training function returned successfully")
         sys.stdout.flush()

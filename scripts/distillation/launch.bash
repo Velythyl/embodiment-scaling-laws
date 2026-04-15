@@ -13,7 +13,7 @@ CMD_TEMPLATE='python3 launch_distillation.py --config-name CONFIG_PLACEHOLDER --
 # ============================================================
 # Data fractions to loop over
 # ============================================================
-FRACTIONS=(0.05 0.1 0.2 0.4 0.6 0.8 1.0)
+FRACTIONS=(1.0 0.05 0.1 0.2 0.4 0.6 0.8 )
 
 # ============================================================
 # How long to wait for job submission (seconds)

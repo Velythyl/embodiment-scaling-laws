@@ -7,6 +7,7 @@ import sys, os
 import shlex
 import signal
 import threading
+import subprocess
 
 import wandb
 from omegaconf import DictConfig, OmegaConf
@@ -33,6 +34,78 @@ RESUME_STATE_NAME = "resume_state.yaml"
 
 # Global preemption state - set by signal handler, checked by training loop
 _preemption_requested = threading.Event()
+
+# Global background rsync process - started early to overlap data sync with training
+_background_rsync_process = None
+
+
+def _start_background_rsync(source_dir: str, target_dir: str) -> "subprocess.Popen | None":
+    """Start a background rsync process to copy training data from SCRATCH to local storage.
+    
+    This allows training to start immediately using fallback (SCRATCH) while the data
+    is being copied to fast local storage. As files complete, subsequent loads will
+    find them locally.
+    
+    Args:
+        source_dir: Source directory (e.g., $SCRATCH/embodiment-scaling-laws/logs/rsl_rl)
+        target_dir: Target directory (e.g., $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl)
+    
+    Returns:
+        subprocess.Popen: The background rsync process (or None if skipped)
+    """
+    global _background_rsync_process
+    
+    # Check if source and target directories are valid
+    source_dir = os.path.expandvars(source_dir)
+    target_dir = os.path.expandvars(target_dir)
+    
+    if not os.path.isdir(source_dir):
+        print(f"[WARN] Background rsync: source directory does not exist: {source_dir}")
+        return None
+    
+    if not os.path.isdir(target_dir):
+        print(f"[INFO] Background rsync: creating target directory: {target_dir}")
+        os.makedirs(target_dir, exist_ok=True)
+    
+    # Build the rsync command - same as was in firsbatch.yaml but runs in background
+    # Uses find + xargs for parallel directory-level rsync (P64 = 64 parallel rsyncs)
+    cmd = (
+        f'find "{source_dir}" -mindepth 1 -maxdepth 1 -print0 | '
+        f'xargs -0 -P64 -I% rsync --quiet -Pa % "{target_dir}"'
+    )
+    
+    print(f"[INFO] Starting background rsync from {source_dir} to {target_dir}")
+    print(f"[INFO] Training will use fallback ($SCRATCH) until local copies are ready")
+    sys.stdout.flush()
+    
+    # Start the process in background - use shell=True for pipes
+    process = subprocess.Popen(
+        cmd,
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        start_new_session=True,  # Detach from parent process group
+    )
+    _background_rsync_process = process
+    
+    # Start a thread to monitor completion and log any errors
+    def _monitor_rsync():
+        try:
+            _, stderr = process.communicate()
+            if process.returncode == 0:
+                print(f"[INFO] Background rsync completed successfully")
+            else:
+                print(f"[WARN] Background rsync exited with code {process.returncode}")
+                if stderr:
+                    print(f"[WARN] rsync stderr: {stderr.decode('utf-8', errors='replace')}")
+        except Exception as e:
+            print(f"[WARN] Background rsync monitor error: {e}")
+        sys.stdout.flush()
+    
+    monitor_thread = threading.Thread(target=_monitor_rsync, daemon=True)
+    monitor_thread.start()
+    
+    return process
 
 
 class PreemptionHandler:
@@ -758,6 +831,25 @@ def main(cfg: DictConfig):
     print("="*50)
     print(OmegaConf.to_yaml(cfg, resolve=True))
     print("="*50 + "\n")
+
+    # Start background rsync to copy data from SCRATCH to local fast storage
+    # Training will start immediately using fallback (SCRATCH) while data syncs
+    fallback_dataset_dir = getattr(cfg.dataloading, 'fallback_dataset_dir', None)
+    dataset_dir = getattr(cfg.dataloading, 'dataset_dir', None)
+    try:
+        slurm_tmpdir = os.environ.get("SLURM_TMPDIR")
+        if slurm_tmpdir is None:
+            slurm_tmpdir = "/tmp/"
+    except Exception:
+        slurm_tmpdir = "/tmp/"
+    if fallback_dataset_dir and slurm_tmpdir:
+        # Resolve env vars in paths
+        source_dir = os.path.expandvars(fallback_dataset_dir)
+        # Target is SLURM_TMPDIR (symlinked to dataset_dir via /tmp/...)
+        target_dir = os.path.join(slurm_tmpdir, "embodiment-scaling-laws/logs/rsl_rl")
+        _start_background_rsync(source_dir, target_dir)
+    else:
+        print(f"[INFO] Background rsync skipped: fallback_dataset_dir={fallback_dataset_dir}, SLURM_TMPDIR={slurm_tmpdir}")
 
     stable_log_dir = _get_hydra_output_dir(cfg) or os.path.join(os.getcwd(), "log_dir")
     print(f"[INFO] Resolved log directory: {stable_log_dir}")

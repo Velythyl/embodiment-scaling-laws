@@ -33,16 +33,10 @@ setup:
   - 'mkdir -p "$SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl"'
   - 'mkdir -p "/tmp/embodiment-scaling-laws/logs"'
   #- 'cp -r /network/scratch/c/charlie.gauthier/embodiment-scaling-laws /tmp/esl'
-  - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Syncing training data from ${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl to $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl\""
-  - 'find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 | xargs -0 -P64 -I% rsync --quiet -Pa % "$SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl"'
+  # rsync is now done asynchronously from Python - see run_distillation.py::_start_background_rsync
   - 'ln -s  $SLURM_TMPDIR/embodiment-scaling-laws/logs/rsl_rl /tmp/embodiment-scaling-laws/logs/rsl_rl'
-  #2- 'ln -s  $SCRATCH/embodiment-scaling-laws/logs/rsl_rl /tmp/embodiment-scaling-laws/logs/rsl_rl'
   - '[ -L /tmp/embodiment-scaling-laws/logs/rsl_rl ] || { echo "ERROR: symlink creation failed"; exit 1; }'
-  - 'ls /tmp/embodiment-scaling-laws/logs/rsl_rl | head -10'
-  #- >-
-  #  find "${oc.env:SCRATCH}/embodiment-scaling-laws/logs/rsl_rl" -mindepth 1 -maxdepth 1 -print0 |
-  #  xargs -0 -P16 -I% bash -c 'd=$(basename "$1") && mkdir -p "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" && tar -C "$1" -cf - . | tar -C "/tmp/embodiment-scaling-laws/logs/rsl_rl/$d" -xpf -' _ %
-  - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Done syncing training data\""
+  - "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Data rsync will run in background during training\""
   - "source /home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/env_isaaclab/bin/activate"
   - 'export HYDRA_SPOOF="/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts"'
   - "sleep $((RANDOM % 100))"

@@ -158,22 +158,26 @@ def _choose_runtime_seed(configured_seed):
     return int.from_bytes(os.urandom(8), byteorder="big", signed=False) % (2**31 - 1)
 
 
-def _should_stop_for_walltime(run_started_at, walltime_limit_minutes):
-    if not walltime_limit_minutes or walltime_limit_minutes <= 0:
+def _should_stop_for_walltime(walltime_deadline):
+    """Check if we've reached the walltime deadline.
+    
+    Args:
+        walltime_deadline: time.monotonic() value when we should stop, or None if disabled.
+    """
+    if walltime_deadline is None:
         return False
-    elapsed_seconds = time.monotonic() - run_started_at
-    return elapsed_seconds >= walltime_limit_minutes * 60
+    return time.monotonic() >= walltime_deadline
 
 
-def _check_stop_reason(run_started_at, walltime_limit_minutes):
+def _check_stop_reason(walltime_deadline):
     """Check if we should stop for preemption or walltime.
     
     Returns:
-        str or None: 'preemption' if SIGTERM received, 'walltime' if budget exceeded, None otherwise.
+        str or None: 'preemption' if SIGTERM received, 'walltime' if deadline reached, None otherwise.
     """
     if _is_preemption_requested():
         return "preemption"
-    if _should_stop_for_walltime(run_started_at, walltime_limit_minutes):
+    if _should_stop_for_walltime(walltime_deadline):
         return "walltime"
     return None
 
@@ -193,6 +197,85 @@ def _requeue_current_slurm_job():
 
     print(f"[INFO] Requeued SLURM job {job_id}")
     return True
+
+
+def _parse_slurm_time(t):
+    """Parse SLURM time format (D-HH:MM:SS or HH:MM:SS or MM:SS) to seconds."""
+    if t == "UNLIMITED" or t == "INVALID":
+        return None
+    try:
+        days = 0
+        if "-" in t:
+            days_str, t = t.split("-", 1)
+            days = int(days_str)
+        parts = t.split(":")
+        if len(parts) == 3:
+            h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
+        elif len(parts) == 2:
+            h, m, s = 0, int(parts[0]), int(parts[1])
+        else:
+            return None
+        return days * 86400 + h * 3600 + m * 60 + s
+    except (ValueError, AttributeError):
+        return None
+
+
+def _get_slurm_deadline(buffer_minutes=10):
+    """Query SLURM once to get the deadline (monotonic time) when we should stop.
+    
+    Args:
+        buffer_minutes: Stop this many minutes before the actual time limit.
+    
+    Returns:
+        float or None: time.monotonic() value when we should stop, or None if not in SLURM.
+    """
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        print("[INFO] Not running under SLURM; walltime budget disabled")
+        return None
+    
+    import subprocess
+    
+    # Query job time limit (%l) and elapsed time (%M)
+    result = subprocess.run(
+        ["squeue", "-j", job_id, "-h", "-o", "%l %M"],
+        capture_output=True, text=True, timeout=30
+    )
+    
+    if result.returncode != 0:
+        print(f"[WARN] Failed to query SLURM job {job_id}: {result.stderr.strip()}")
+        return None
+    
+    parts = result.stdout.strip().split()
+    if len(parts) < 2:
+        print(f"[WARN] Unexpected squeue output: {result.stdout.strip()}")
+        return None
+    
+    time_limit_str, elapsed_str = parts[0], parts[1]
+    time_limit = _parse_slurm_time(time_limit_str)
+    elapsed = _parse_slurm_time(elapsed_str)
+    
+    if time_limit is None:
+        print(f"[INFO] SLURM time limit is {time_limit_str}; walltime budget disabled")
+        return None
+    
+    if elapsed is None:
+        print(f"[WARN] Could not parse SLURM elapsed time: {elapsed_str}")
+        elapsed = 0
+    
+    remaining = time_limit - elapsed
+    budget = remaining - buffer_minutes * 60
+    
+    if budget <= 0:
+        print(f"[WARN] SLURM time budget already exhausted (remaining={remaining/60:.1f}min, buffer={buffer_minutes}min)")
+        return time.monotonic()  # Stop immediately
+    
+    deadline = time.monotonic() + budget
+    print(f"[INFO] SLURM walltime: limit={time_limit/60:.0f}min, elapsed={elapsed/60:.1f}min, "
+          f"remaining={remaining/60:.1f}min → will stop in {budget/60:.1f}min (buffer={buffer_minutes}min)")
+    
+    return deadline
+
 
 class CudaPrefetcher:
     """Prefetch batches to GPU using a separate CUDA stream.
@@ -331,11 +414,12 @@ def _run_eval(policy, criterion, dataloader, model_device, loss_meters, phase_na
 
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
           log_dir, checkpoint_interval, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
-          log_epoch_pct=10.0, eval_epoch_pct=None, scaler=None, walltime_limit_minutes=None,
-          run_started_at=None, initial_best_val_loss=float("inf"), runtime_seed=0, resume_from_iteration=0):
+          log_epoch_pct=10.0, eval_epoch_pct=None, scaler=None, walltime_deadline=None,
+          initial_best_val_loss=float("inf"), runtime_seed=0, resume_from_iteration=0):
     """Training loop with validation, TensorBoard logging, and checkpoint saving.
     
     Args:
+        walltime_deadline: time.monotonic() value when we should stop for walltime, or None if disabled.
         resume_from_iteration: Skip wandb logging until we reach this iteration.
             Used to avoid duplicate data points when resuming mid-epoch.
     """
@@ -535,7 +619,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 if scheduler is not None:
                     scheduler.step()
 
-                stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+                stop_reason = _check_stop_reason(walltime_deadline)
                 if stop_reason:
                     optimizer.zero_grad()
                     checkpoint_path = _save_training_checkpoint(
@@ -598,7 +682,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             if (epoch + 1) % checkpoint_interval == 0:
                 _save_training_checkpoint(epoch + 1, checkpoint_reason="periodic_epoch")
             wandb.log(epoch_log_dict)
-            stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+            stop_reason = _check_stop_reason(walltime_deadline)
             if stop_reason:
                 checkpoint_path = _save_training_checkpoint(epoch + 1, checkpoint_reason=f"{stop_reason}_epoch_boundary")
                 print(
@@ -649,7 +733,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         # Switch back to train mode for next epoch
         policy.train()
 
-        stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+        stop_reason = _check_stop_reason(walltime_deadline)
         if stop_reason:
             checkpoint_path = _save_training_checkpoint(epoch + 1, checkpoint_reason=f"{stop_reason}_epoch_boundary")
             print(
@@ -974,10 +1058,13 @@ def main(cfg: DictConfig):
         )
         print(f"[INFO] Initial policy saved to {log_dir}")
 
+    # Calculate walltime deadline from SLURM (queries squeue once)
+    # Buffer of 10 minutes before SLURM time limit to allow for checkpoint saving
+    walltime_deadline = _get_slurm_deadline(buffer_minutes=10)
+
     # Train the policy
     print(f"[INFO] About to start training from epoch {start_epoch}...")
     sys.stdout.flush()
-    run_started_at = time.monotonic()
     try:
         train_result = train(
             policy=policy,
@@ -999,8 +1086,7 @@ def main(cfg: DictConfig):
             log_epoch_pct=cfg.optim.log_epoch_pct,
             eval_epoch_pct=getattr(cfg.optim, 'eval_epoch_pct', None),
             scaler=scaler,
-            walltime_limit_minutes=getattr(cfg.meta, "walltime_limit_minutes", None),
-            run_started_at=run_started_at,
+            walltime_deadline=walltime_deadline,
             initial_best_val_loss=initial_best_val_loss,
             runtime_seed=runtime_seed,
             resume_from_iteration=resume_from_iteration,

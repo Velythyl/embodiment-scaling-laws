@@ -4,7 +4,6 @@ tags: []
 seed: -1
 wandb_mode: online
 auto_requeue: false
-walltime_limit_minutes: 1000000
 SLURM_JOB_ID: ${oc.env:SLURM_JOB_ID,null}
 SLURM_ARRAY_JOB_ID: ${oc.env:SLURM_ARRAY_JOB_ID,null}
 SLURM_ARRAY_TASK_ID: ${oc.env:SLURM_ARRAY_TASK_ID,null}

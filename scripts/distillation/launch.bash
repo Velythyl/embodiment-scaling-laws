@@ -19,7 +19,7 @@ FRACTIONS=(0.05 0.1 0.2 0.4 0.6 0.8 1.0)
 # How long to wait for job submission (seconds)
 # Increase if submission takes longer
 # ============================================================
-WAIT_FOR_SUBMISSION=30
+WAIT_FOR_SUBMISSION=60
 CHECK_INTERVAL=2
 
 for FRAC in "${FRACTIONS[@]}"; do

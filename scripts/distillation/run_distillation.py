@@ -253,13 +253,14 @@ def set_seed(seed):
         torch.backends.cudnn.benchmark = True  # Disable optimizations for reproducibility
 
 
-def _checkpoint_metadata(best_val_loss, runtime_seed, checkpoint_reason, epoch_index, batch_index=None):
+def _checkpoint_metadata(best_val_loss, runtime_seed, checkpoint_reason, epoch_index, batch_index=None, last_iteration=None):
     return {
         "best_val_loss": None if best_val_loss == float("inf") else float(best_val_loss),
         "runtime_seed": int(runtime_seed),
         "checkpoint_reason": checkpoint_reason,
         "epoch_index": int(epoch_index),
         "batch_index": None if batch_index is None else int(batch_index),
+        "last_iteration": None if last_iteration is None else int(last_iteration),
         "saved_at_unix": time.time(),
     }
 
@@ -331,22 +332,30 @@ def _run_eval(policy, criterion, dataloader, model_device, loss_meters, phase_na
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
           log_dir, checkpoint_interval, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
           log_epoch_pct=10.0, eval_epoch_pct=None, scaler=None, walltime_limit_minutes=None,
-          run_started_at=None, initial_best_val_loss=float("inf"), runtime_seed=0):
-    """Training loop with validation, TensorBoard logging, and checkpoint saving."""
+          run_started_at=None, initial_best_val_loss=float("inf"), runtime_seed=0, resume_from_iteration=0):
+    """Training loop with validation, TensorBoard logging, and checkpoint saving.
+    
+    Args:
+        resume_from_iteration: Skip wandb logging until we reach this iteration.
+            Used to avoid duplicate data points when resuming mid-epoch.
+    """
     scaler = scaler or torch.cuda.amp.GradScaler(enabled=use_amp)
 
     train_loss_meters = {}
     val_loss_meters = {}
     test_loss_meters = {}
     best_val_loss = initial_best_val_loss
+    last_logged_iteration = resume_from_iteration  # Track for checkpoint metadata
 
-    def _save_training_checkpoint(next_epoch, checkpoint_reason, is_best=False, batch_index=None, update_latest=True):
+    def _save_training_checkpoint(next_epoch, checkpoint_reason, is_best=False, batch_index=None, update_latest=True, iteration=None):
+        nonlocal last_logged_iteration
         metadata = _checkpoint_metadata(
             best_val_loss=best_val_loss,
             runtime_seed=runtime_seed,
             checkpoint_reason=checkpoint_reason,
             epoch_index=epoch,
             batch_index=batch_index,
+            last_iteration=iteration if iteration is not None else last_logged_iteration,
         )
         return save_checkpoint(
             policy,
@@ -455,10 +464,10 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Update progress bar with current loss
                 pbar.set_postfix({"Loss": f"{get_meter_dict_avg(train_loss_meters):.4f}"})
 
-                # Log times
-                # start_time = time.time()
+                # Log times - skip if we're catching up from a resume to avoid duplicate data points
                 current_pct = 100.0 * (index + 1) / len(train_dataloader)
-                if current_pct >= next_log_pct or index == 0:
+                should_log_this_iteration = iteration >= resume_from_iteration
+                if should_log_this_iteration and (current_pct >= next_log_pct or index == 0):
                     next_log_pct = current_pct - (current_pct % log_epoch_pct) + log_epoch_pct
                     log_dict = {
                         "Train/times/io_per_thread": io_times.mean().item(),
@@ -479,11 +488,14 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     if grad_norm is not None:
                         log_dict["Train/grad_norm-iter"] = grad_norm
                     wandb.log(log_dict)
+                    last_logged_iteration = iteration
                     train_bps = (index + 1) / (time.time() - train_phase_start_time)
                     print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {current_pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
+                elif not should_log_this_iteration and index == 0:
+                    print(f"[INFO] Skipping logging until iteration {resume_from_iteration} (currently at {iteration})")
 
-                # Mid-epoch validation/test evaluation
-                if eval_epoch_pct is not None and eval_epoch_pct > 0 and current_pct >= next_eval_pct:
+                # Mid-epoch validation/test evaluation - also skip if catching up
+                if should_log_this_iteration and eval_epoch_pct is not None and eval_epoch_pct > 0 and current_pct >= next_eval_pct:
                     next_eval_pct = current_pct - (current_pct % eval_epoch_pct) + eval_epoch_pct
                     epoch_progress = epoch + (index + 1) / len(train_dataloader)
                     print(f"[INFO] Mid-epoch eval at {current_pct:.1f}% of epoch {epoch + 1}")
@@ -530,6 +542,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         next_epoch=epoch,
                         checkpoint_reason=f"{stop_reason}_mid_epoch",
                         batch_index=index + 1,
+                        iteration=iteration,
                     )
                     print(
                         f"[INFO] Stop requested ({stop_reason}) during epoch {epoch + 1}; "
@@ -540,6 +553,7 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                         "checkpoint_path": checkpoint_path,
                         "next_epoch": epoch,
                         "stop_reason": stop_reason,
+                        "last_iteration": iteration,
                     }
 
                 iteration_start_time = time.time()  # start time of next iteration
@@ -921,6 +935,7 @@ def main(cfg: DictConfig):
 
     start_epoch = 0
     initial_best_val_loss = float("inf")
+    resume_from_iteration = 0
     scaler = torch.cuda.amp.GradScaler(enabled=bool(cfg.optim.use_amp))
 
     # Load checkpoint if path specified or auto-discovered
@@ -936,6 +951,10 @@ def main(cfg: DictConfig):
         checkpoint_metadata = checkpoint.get("metadata") or {}
         if checkpoint_metadata.get("best_val_loss") is not None:
             initial_best_val_loss = checkpoint_metadata["best_val_loss"]
+        # Get last logged iteration to avoid duplicate wandb data points
+        if checkpoint_metadata.get("last_iteration") is not None:
+            resume_from_iteration = checkpoint_metadata["last_iteration"] + 1
+            print(f"[INFO] Will skip logging until iteration {resume_from_iteration} to avoid duplicates")
         print(f"[INFO] Loaded checkpoint from {resume_checkpoint_path}, resuming from epoch {start_epoch}")
     else:
         # Save initial (untrained) policy
@@ -984,6 +1003,7 @@ def main(cfg: DictConfig):
             run_started_at=run_started_at,
             initial_best_val_loss=initial_best_val_loss,
             runtime_seed=runtime_seed,
+            resume_from_iteration=resume_from_iteration,
         )
         print(f"[INFO] Training function returned with status={train_result['status']}")
         if train_result["status"] == "requeue_requested":

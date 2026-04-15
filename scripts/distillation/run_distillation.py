@@ -1013,10 +1013,17 @@ def main(cfg: DictConfig):
             resume_state["last_runtime_seed"] = runtime_seed
             _save_resume_state(log_dir, resume_state)
 
+            # Finish wandb BEFORE requeue - scontrol requeue may trigger SIGTERM immediately
+            if wandb.run is not None:
+                wandb.finish()
+                print("[INFO] Wandb finished before requeue")
+
             if getattr(cfg.meta, "auto_requeue", True):
                 requeue_succeeded = _requeue_current_slurm_job()
                 if not requeue_succeeded:
                     raise RuntimeError(f"Checkpoint saved ({stop_reason}), but SLURM requeue failed")
+                # Exit quickly after requeue - SLURM will terminate us soon anyway
+                sys.exit(0)
             else:
                 print(f"[WARN] auto_requeue is disabled; stopping after saving checkpoint ({stop_reason})")
         sys.stdout.flush()
@@ -1028,6 +1035,7 @@ def main(cfg: DictConfig):
         raise
     finally:
         preemption_handler.uninstall()
+        # wandb.finish() is idempotent - safe to call even if already finished in requeue path
         if wandb.run is not None:
             wandb.finish()
 

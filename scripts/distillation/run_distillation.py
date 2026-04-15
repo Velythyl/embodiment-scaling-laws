@@ -5,10 +5,13 @@ import random
 import gc
 import sys, os
 import shlex
+import signal
+import threading
 
 import wandb
 from omegaconf import DictConfig, OmegaConf
 import time
+import yaml
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # for urma_model
 sys.path.append("/home/cgauthie/projects/def-lpaull/cgauthie/embodiment-scaling-laws/scripts")
@@ -23,6 +26,173 @@ from dataset_functions import LocomotionDataset
 import tqdm
 from urma_model.policy_3head_scale2 import get_policy
 print("Loaded URMA initially without error")
+
+
+LATEST_CHECKPOINT_NAME = "latest_checkpoint.pt"
+RESUME_STATE_NAME = "resume_state.yaml"
+
+# Global preemption state - set by signal handler, checked by training loop
+_preemption_requested = threading.Event()
+
+
+class PreemptionHandler:
+    """Handle SLURM preemption signals (SIGTERM) by saving checkpoint and requeueing.
+    
+    On clusters with preemption, SLURM sends SIGTERM before SIGKILL. This handler:
+    1. Sets a flag that the training loop checks
+    2. The training loop saves checkpoint and requeues when it sees the flag
+    
+    We use a flag + check pattern (not direct save in handler) because:
+    - Signal handlers should be quick and avoid I/O
+    - We need access to training state (model, optimizer, etc.)
+    """
+    
+    def __init__(self):
+        self.original_sigterm = None
+        self.enabled = False
+    
+    def install(self):
+        """Install the SIGTERM handler."""
+        if self.enabled:
+            return
+        self.original_sigterm = signal.signal(signal.SIGTERM, self._handle_sigterm)
+        self.enabled = True
+        print("[INFO] Preemption handler installed (SIGTERM)")
+    
+    def uninstall(self):
+        """Restore original signal handler."""
+        if not self.enabled:
+            return
+        if self.original_sigterm is not None:
+            signal.signal(signal.SIGTERM, self.original_sigterm)
+        self.enabled = False
+        print("[INFO] Preemption handler uninstalled")
+    
+    def _handle_sigterm(self, signum, frame):
+        """Signal handler - just sets the flag, actual work done in training loop."""
+        print(f"\n[PREEMPT] Received SIGTERM (signal {signum}) - requesting graceful shutdown", flush=True)
+        _preemption_requested.set()
+        # Don't exit - let training loop handle checkpoint and requeue
+
+
+def _is_preemption_requested():
+    """Check if preemption was requested (SIGTERM received)."""
+    return _preemption_requested.is_set()
+
+
+def _get_hydra_output_dir(cfg=None):
+    """Get the Hydra output directory, with multiple fallback strategies.
+    
+    Priority (for multirun/SLURM jobs):
+    1. HYDRA_SWEEP_DIR env var + SLURM_ARRAY_TASK_ID (most reliable on requeue)
+    2. cfg.meta.SLURM_HYDRA_DIR parent (uses resolved config values)
+    3. HydraConfig.get().runtime.output_dir (standard Hydra way - but wrong after HYDRA_SPOOF)
+    4. None (caller should handle fallback)
+    """
+    # For SLURM multirun jobs: use env vars directly (survives requeue + HYDRA_SPOOF)
+    sweep_dir = os.environ.get("HYDRA_SWEEP_DIR")
+    task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    if sweep_dir and task_id:
+        log_dir = os.path.join(sweep_dir, task_id)
+        print(f"[INFO] Using HYDRA_SWEEP_DIR + SLURM_ARRAY_TASK_ID: {log_dir}")
+        return log_dir
+    
+    # Fallback: use SLURM_HYDRA_DIR from config (parent of .hydra folder)
+    if cfg is not None:
+        slurm_hydra_dir = getattr(cfg.meta, "SLURM_HYDRA_DIR", None)
+        if slurm_hydra_dir and slurm_hydra_dir != "null" and os.path.basename(slurm_hydra_dir) == ".hydra":
+            parent = os.path.dirname(slurm_hydra_dir)
+            if parent:
+                print(f"[INFO] Using SLURM_HYDRA_DIR parent as log_dir: {parent}")
+                return parent
+    
+    # Standard Hydra method (works for non-SLURM runs, but NOT after HYDRA_SPOOF relaunch)
+    try:
+        from hydra.core.hydra_config import HydraConfig
+        hydra_dir = HydraConfig.get().runtime.output_dir
+        if hydra_dir:
+            print(f"[INFO] Using HydraConfig.runtime.output_dir: {hydra_dir}")
+            return hydra_dir
+    except Exception:
+        pass
+    
+    return None
+
+
+def _load_resume_state(log_dir):
+    resume_state_path = os.path.join(log_dir, RESUME_STATE_NAME)
+    if not os.path.exists(resume_state_path):
+        return {}
+
+    with open(resume_state_path, "r", encoding="utf-8") as handle:
+        loaded = yaml.safe_load(handle) or {}
+    if not isinstance(loaded, dict):
+        raise ValueError(f"Invalid resume state in {resume_state_path}: expected a mapping")
+    return loaded
+
+
+def _save_resume_state(log_dir, resume_state):
+    resume_state_path = os.path.join(log_dir, RESUME_STATE_NAME)
+    with open(resume_state_path, "w", encoding="utf-8") as handle:
+        yaml.safe_dump(resume_state, handle, sort_keys=True)
+    print(f"[INFO] Resume state saved to {resume_state_path}")
+
+
+def _resolve_resume_checkpoint(config_resume_path, log_dir, resume_state):
+    if config_resume_path:
+        return config_resume_path
+
+    candidates = [
+        resume_state.get("latest_checkpoint"),
+        os.path.join(log_dir, LATEST_CHECKPOINT_NAME),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return None
+
+
+def _choose_runtime_seed(configured_seed):
+    if configured_seed is not None and int(configured_seed) >= 0:
+        return int(configured_seed)
+    return int.from_bytes(os.urandom(8), byteorder="big", signed=False) % (2**31 - 1)
+
+
+def _should_stop_for_walltime(run_started_at, walltime_limit_minutes):
+    if not walltime_limit_minutes or walltime_limit_minutes <= 0:
+        return False
+    elapsed_seconds = time.monotonic() - run_started_at
+    return elapsed_seconds >= walltime_limit_minutes * 60
+
+
+def _check_stop_reason(run_started_at, walltime_limit_minutes):
+    """Check if we should stop for preemption or walltime.
+    
+    Returns:
+        str or None: 'preemption' if SIGTERM received, 'walltime' if budget exceeded, None otherwise.
+    """
+    if _is_preemption_requested():
+        return "preemption"
+    if _should_stop_for_walltime(run_started_at, walltime_limit_minutes):
+        return "walltime"
+    return None
+
+
+def _requeue_current_slurm_job():
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        print("[WARN] Not running under SLURM; skipping requeue")
+        return False
+
+    import subprocess
+
+    result = subprocess.run(["scontrol", "requeue", job_id], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"[ERROR] Failed to requeue SLURM job {job_id}: {result.stderr.strip()}")
+        return False
+
+    print(f"[INFO] Requeued SLURM job {job_id}")
+    return True
 
 class CudaPrefetcher:
     """Prefetch batches to GPU using a separate CUDA stream.
@@ -81,6 +251,17 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)  # Set the seed for all GPUs (if using multiple GPUs)
         torch.backends.cudnn.deterministic = True  # Ensure deterministic behavior
         torch.backends.cudnn.benchmark = True  # Disable optimizations for reproducibility
+
+
+def _checkpoint_metadata(best_val_loss, runtime_seed, checkpoint_reason, epoch_index, batch_index=None):
+    return {
+        "best_val_loss": None if best_val_loss == float("inf") else float(best_val_loss),
+        "runtime_seed": int(runtime_seed),
+        "checkpoint_reason": checkpoint_reason,
+        "epoch_index": int(epoch_index),
+        "batch_index": None if batch_index is None else int(batch_index),
+        "saved_at_unix": time.time(),
+    }
 
 
 def get_meter_dict_avg(meter_dicts):
@@ -149,14 +330,35 @@ def _run_eval(policy, criterion, dataloader, model_device, loss_meters, phase_na
 
 def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, test_dataset, num_epochs, model_device,
           log_dir, checkpoint_interval, gradient_acc_steps, batch_size, num_workers, use_amp, start_epoch,
-          log_epoch_pct=10.0, eval_epoch_pct=None):
+          log_epoch_pct=10.0, eval_epoch_pct=None, scaler=None, walltime_limit_minutes=None,
+          run_started_at=None, initial_best_val_loss=float("inf"), runtime_seed=0):
     """Training loop with validation, TensorBoard logging, and checkpoint saving."""
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = scaler or torch.cuda.amp.GradScaler(enabled=use_amp)
 
     train_loss_meters = {}
     val_loss_meters = {}
     test_loss_meters = {}
-    best_val_loss = float("inf")
+    best_val_loss = initial_best_val_loss
+
+    def _save_training_checkpoint(next_epoch, checkpoint_reason, is_best=False, batch_index=None, update_latest=True):
+        metadata = _checkpoint_metadata(
+            best_val_loss=best_val_loss,
+            runtime_seed=runtime_seed,
+            checkpoint_reason=checkpoint_reason,
+            epoch_index=epoch,
+            batch_index=batch_index,
+        )
+        return save_checkpoint(
+            policy,
+            optimizer,
+            next_epoch,
+            log_dir,
+            is_best=is_best,
+            scheduler=scheduler,
+            scaler=scaler,
+            metadata=metadata,
+            update_latest=update_latest,
+        )
 
     print("[INFO] Starting supervised training.")
     for epoch in range(start_epoch, num_epochs):
@@ -307,7 +509,12 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     # Save best model based on mid-epoch val loss
                     if val_avg is not None and val_avg < best_val_loss:
                         best_val_loss = val_avg
-                        save_checkpoint(policy, optimizer, epoch + 1, log_dir, is_best=True)
+                        _save_training_checkpoint(
+                            epoch + 1,
+                            checkpoint_reason="best_val",
+                            is_best=True,
+                            update_latest=False,
+                        )
 
                     # Switch back to training mode
                     policy.train()
@@ -315,6 +522,25 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Step the LR scheduler by iteration
                 if scheduler is not None:
                     scheduler.step()
+
+                stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+                if stop_reason:
+                    optimizer.zero_grad()
+                    checkpoint_path = _save_training_checkpoint(
+                        next_epoch=epoch,
+                        checkpoint_reason=f"{stop_reason}_mid_epoch",
+                        batch_index=index + 1,
+                    )
+                    print(
+                        f"[INFO] Stop requested ({stop_reason}) during epoch {epoch + 1}; "
+                        f"saved {checkpoint_path} and requesting requeue"
+                    )
+                    return {
+                        "status": "requeue_requested",
+                        "checkpoint_path": checkpoint_path,
+                        "next_epoch": epoch,
+                        "stop_reason": stop_reason,
+                    }
 
                 iteration_start_time = time.time()  # start time of next iteration
                 _batch_fetch_start = time.time()
@@ -347,7 +573,30 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         epoch_log_dict.update(val_log_dict)
 
         if epoch == 0:
+            if val_avg is not None and val_avg < best_val_loss:
+                best_val_loss = val_avg
+                _save_training_checkpoint(
+                    epoch + 1,
+                    checkpoint_reason="best_val",
+                    is_best=True,
+                    update_latest=False,
+                )
+            if (epoch + 1) % checkpoint_interval == 0:
+                _save_training_checkpoint(epoch + 1, checkpoint_reason="periodic_epoch")
             wandb.log(epoch_log_dict)
+            stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+            if stop_reason:
+                checkpoint_path = _save_training_checkpoint(epoch + 1, checkpoint_reason=f"{stop_reason}_epoch_boundary")
+                print(
+                    f"[INFO] Stop requested ({stop_reason}) after epoch {epoch + 1}; "
+                    f"saved {checkpoint_path} and requesting requeue"
+                )
+                return {
+                    "status": "requeue_requested",
+                    "checkpoint_path": checkpoint_path,
+                    "next_epoch": epoch + 1,
+                    "stop_reason": stop_reason,
+                }
             continue
 
         if len(test_dataset) > 0:
@@ -366,12 +615,17 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
 
         # Save checkpoints periodically
         if (epoch + 1) % checkpoint_interval == 0:
-            save_checkpoint(policy, optimizer, epoch + 1, log_dir)
+            _save_training_checkpoint(epoch + 1, checkpoint_reason="periodic_epoch")
 
         # Save the best model based on validation loss
         if val_avg is not None and val_avg < best_val_loss:
             best_val_loss = val_avg
-            save_checkpoint(policy, optimizer, epoch + 1, log_dir, is_best=True)
+            _save_training_checkpoint(
+                epoch + 1,
+                checkpoint_reason="best_val",
+                is_best=True,
+                update_latest=False,
+            )
 
         test_avg_display = get_meter_dict_avg(test_loss_meters)
         print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {get_meter_dict_avg(train_loss_meters):.6f}, "
@@ -381,9 +635,22 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
         # Switch back to train mode for next epoch
         policy.train()
 
-    if wandb.run is not None:
-        wandb.finish()
+        stop_reason = _check_stop_reason(run_started_at, walltime_limit_minutes)
+        if stop_reason:
+            checkpoint_path = _save_training_checkpoint(epoch + 1, checkpoint_reason=f"{stop_reason}_epoch_boundary")
+            print(
+                f"[INFO] Stop requested ({stop_reason}) after epoch {epoch + 1}; "
+                f"saved {checkpoint_path} and requesting requeue"
+            )
+            return {
+                "status": "requeue_requested",
+                "checkpoint_path": checkpoint_path,
+                "next_epoch": epoch + 1,
+                "stop_reason": stop_reason,
+            }
+
     print("[INFO] Training completed. Wandb logs saved.")
+    return {"status": "completed"}
 
 
 def main(cfg: DictConfig):
@@ -394,10 +661,22 @@ def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg, resolve=True))
     print("="*50 + "\n")
 
-    # Set seed
-    seed = cfg.meta.seed
-    if seed >= 0:
-        set_seed(seed)
+    stable_log_dir = _get_hydra_output_dir(cfg) or os.path.join(os.getcwd(), "log_dir")
+    print(f"[INFO] Resolved log directory: {stable_log_dir}")
+    os.makedirs(stable_log_dir, exist_ok=True)
+
+    resume_state = _load_resume_state(stable_log_dir)
+    if resume_state:
+        print(f"[INFO] Loaded resume state: {resume_state}")
+    else:
+        print(f"[INFO] No resume state found at {stable_log_dir}/{RESUME_STATE_NAME}")
+    resume_checkpoint_path = _resolve_resume_checkpoint(cfg.resume, stable_log_dir, resume_state)
+    if resume_checkpoint_path:
+        print(f"[INFO] Will resume from checkpoint: {resume_checkpoint_path}")
+
+    runtime_seed = _choose_runtime_seed(cfg.meta.seed)
+    set_seed(runtime_seed)
+    print(f"[INFO] Using runtime seed: {runtime_seed}")
 
     # Initialize wandb
     wandb_mode = cfg.meta.wandb_mode
@@ -405,6 +684,17 @@ def main(cfg: DictConfig):
         from hydra.core.hydra_config import HydraConfig
         wandb_config = OmegaConf.to_container(cfg, resolve=True)
         wandb_config["meta"]["config_name"] = HydraConfig.get().job.config_name
+        wandb_config["meta"]["runtime_seed"] = runtime_seed
+        wandb_id = resume_state.get("wandb_run_id")
+        
+        # Debug: show what we're passing to wandb.init
+        print(f"[INFO] Wandb init: project={cfg.meta.project}, dir={stable_log_dir}")
+        print(f"[INFO] Wandb resume: id={wandb_id}, resume={'allow' if wandb_id else None}")
+        
+        # Disable wandb's SIGTERM handler - we handle preemption ourselves
+        # wandb's handler restarts from scratch; ours saves checkpoint and requeues
+        os.environ["WANDB_DISABLE_SERVICE"] = "true"  # Disable wandb service (uses signals)
+        
         wandb.init(
             project=cfg.meta.project,
             name=cfg.meta.run_name,
@@ -412,17 +702,31 @@ def main(cfg: DictConfig):
             mode=wandb_mode,
             tags=list(cfg.meta.tags) if cfg.meta.tags else None,
             notes=cfg.meta.notes or None,
+            dir=stable_log_dir,
+            id=wandb_id,
+            resume="allow" if wandb_id else None,
         )
-        print(f"[INFO] Wandb initialized (mode={wandb_mode})")
+        print(f"[INFO] Wandb initialized (mode={wandb_mode}, run_id={wandb.run.id if wandb.run else 'None'})")
 
-    # Use wandb's run directory for logging, fall back to cwd/log_dir
+    # Install our preemption handler for SIGTERM (SLURM preemption)
+    preemption_handler = PreemptionHandler()
+    preemption_handler.install()
+
+    log_dir = stable_log_dir
     if wandb.run is not None:
-        log_dir = wandb.run.dir
-        print(f"[INFO] Wandb run directory: {log_dir}")
-    else:
-        log_dir = os.path.join(os.getcwd(), "log_dir")
-    os.makedirs(log_dir, exist_ok=True)
+        print(f"[INFO] Wandb run directory: {wandb.run.dir}")
     print(f"[INFO] Checkpoints will be saved to {log_dir}")
+
+    resume_state.update(
+        {
+            "log_dir": log_dir,
+            "latest_checkpoint": os.path.join(log_dir, LATEST_CHECKPOINT_NAME),
+            "wandb_run_id": wandb.run.id if wandb.run is not None else resume_state.get("wandb_run_id"),
+            "requeue_count": int(resume_state.get("requeue_count", 0)),
+            "last_runtime_seed": runtime_seed,
+        }
+    )
+    _save_resume_state(log_dir, resume_state)
 
     # Save config to a YAML file for reproducibility
     config_save_path = os.path.join(log_dir, "config.yaml")
@@ -615,24 +919,48 @@ def main(cfg: DictConfig):
         print("[INFO] Scheduler created with cosine annealing (no warmup)")
     sys.stdout.flush()
 
-    # Load checkpoint if path specified
-    if cfg.resume:
-        checkpoint = torch.load(cfg.resume, map_location="cpu")
+    start_epoch = 0
+    initial_best_val_loss = float("inf")
+    scaler = torch.cuda.amp.GradScaler(enabled=bool(cfg.optim.use_amp))
+
+    # Load checkpoint if path specified or auto-discovered
+    if resume_checkpoint_path:
+        checkpoint = torch.load(resume_checkpoint_path, map_location="cpu")
         policy.load_state_dict(checkpoint["state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if checkpoint.get("scheduler_state_dict") is not None:
+            scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        if checkpoint.get("scaler_state_dict") is not None:
+            scaler.load_state_dict(checkpoint["scaler_state_dict"])
         start_epoch = checkpoint["epoch"]
-        print(f"[INFO] Loaded checkpoint from {cfg.resume}, resuming from epoch {start_epoch}")
+        checkpoint_metadata = checkpoint.get("metadata") or {}
+        if checkpoint_metadata.get("best_val_loss") is not None:
+            initial_best_val_loss = checkpoint_metadata["best_val_loss"]
+        print(f"[INFO] Loaded checkpoint from {resume_checkpoint_path}, resuming from epoch {start_epoch}")
     else:
-        start_epoch = 0
         # Save initial (untrained) policy
-        save_checkpoint(policy, optimizer, 0, log_dir)
+        save_checkpoint(
+            policy,
+            optimizer,
+            0,
+            log_dir,
+            scheduler=scheduler,
+            scaler=scaler,
+            metadata=_checkpoint_metadata(
+                best_val_loss=initial_best_val_loss,
+                runtime_seed=runtime_seed,
+                checkpoint_reason="initial",
+                epoch_index=0,
+            ),
+        )
         print(f"[INFO] Initial policy saved to {log_dir}")
 
     # Train the policy
     print(f"[INFO] About to start training from epoch {start_epoch}...")
     sys.stdout.flush()
+    run_started_at = time.monotonic()
     try:
-        train(
+        train_result = train(
             policy=policy,
             criterion=criterion,
             optimizer=optimizer,
@@ -650,9 +978,27 @@ def main(cfg: DictConfig):
             use_amp=bool(cfg.optim.use_amp),
             start_epoch=start_epoch,
             log_epoch_pct=cfg.optim.log_epoch_pct,
-            eval_epoch_pct=getattr(cfg.optim, 'eval_epoch_pct', None)
+            eval_epoch_pct=getattr(cfg.optim, 'eval_epoch_pct', None),
+            scaler=scaler,
+            walltime_limit_minutes=getattr(cfg.meta, "walltime_limit_minutes", None),
+            run_started_at=run_started_at,
+            initial_best_val_loss=initial_best_val_loss,
+            runtime_seed=runtime_seed,
         )
-        print("[INFO] Training function returned successfully")
+        print(f"[INFO] Training function returned with status={train_result['status']}")
+        if train_result["status"] == "requeue_requested":
+            stop_reason = train_result.get("stop_reason", "unknown")
+            resume_state["requeue_count"] = int(resume_state.get("requeue_count", 0)) + 1
+            resume_state["last_requeue_reason"] = stop_reason
+            resume_state["last_runtime_seed"] = runtime_seed
+            _save_resume_state(log_dir, resume_state)
+
+            if getattr(cfg.meta, "auto_requeue", True):
+                requeue_succeeded = _requeue_current_slurm_job()
+                if not requeue_succeeded:
+                    raise RuntimeError(f"Checkpoint saved ({stop_reason}), but SLURM requeue failed")
+            else:
+                print(f"[WARN] auto_requeue is disabled; stopping after saving checkpoint ({stop_reason})")
         sys.stdout.flush()
     except Exception as e:
         print(f"[ERROR] Training failed with exception: {e}")
@@ -660,6 +1006,10 @@ def main(cfg: DictConfig):
         traceback.print_exc()
         sys.stdout.flush()
         raise
+    finally:
+        preemption_handler.uninstall()
+        if wandb.run is not None:
+            wandb.finish()
 
 
 if __name__ == "__main__":

@@ -227,21 +227,39 @@ def get_most_recent_h5py_record_path(base_path, task_name):
     return h5py_record_path
 
 
-def save_checkpoint(policy, optimizer, epoch, log_dir, is_best=False):
-    """Save the model checkpoint."""
+def save_checkpoint(policy, optimizer, epoch, log_dir, is_best=False, scheduler=None, scaler=None, metadata=None,
+                    update_latest=True):
+    """Save the model checkpoint.
+
+    The ``epoch`` field stores the next epoch index to resume from.
+    """
     checkpoint = {
         "epoch": epoch,
         "state_dict": policy.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(),
     }
+    if scheduler is not None:
+        checkpoint["scheduler_state_dict"] = scheduler.state_dict()
+    if scaler is not None:
+        checkpoint["scaler_state_dict"] = scaler.state_dict()
+    if metadata is not None:
+        checkpoint["metadata"] = metadata
+
     checkpoint_path = os.path.join(log_dir, f"checkpoint_epoch_{epoch}.pt")
     torch.save(checkpoint, checkpoint_path)
     print(f"[INFO] Checkpoint saved to {checkpoint_path}")
+
+    if update_latest:
+        latest_checkpoint_path = os.path.join(log_dir, "latest_checkpoint.pt")
+        torch.save(checkpoint, latest_checkpoint_path)
+        print(f"[INFO] Latest checkpoint updated at {latest_checkpoint_path}")
 
     if is_best:
         best_checkpoint_path = os.path.join(log_dir, "best_model.pt")
         torch.save(checkpoint, best_checkpoint_path)
         print(f"[INFO] Best model saved to {best_checkpoint_path}")
+
+    return checkpoint_path
 
 
 def one_policy_observation_to_inputs(one_policy_observation: torch.tensor, metadata, device):

@@ -257,15 +257,32 @@ def _check_stop_reason(walltime_deadline):
 
 def _requeue_current_slurm_job():
     job_id = os.environ.get("SLURM_JOB_ID")
+    array_job_id = os.environ.get("SLURM_ARRAY_JOB_ID")
+    array_task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    
     if not job_id:
         print("[WARN] Not running under SLURM; skipping requeue")
         return False
+
+    # Log array job information for debugging
+    if array_job_id and array_task_id:
+        print(f"[INFO] Array job detected: SLURM_ARRAY_JOB_ID={array_job_id}, "
+              f"SLURM_ARRAY_TASK_ID={array_task_id}, SLURM_JOB_ID={job_id}")
+        print(f"[INFO] Will requeue using SLURM_JOB_ID={job_id}")
+    else:
+        print(f"[INFO] Non-array job, SLURM_JOB_ID={job_id}")
 
     import subprocess
 
     result = subprocess.run(["scontrol", "requeue", job_id], capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"[ERROR] Failed to requeue SLURM job {job_id}: {result.stderr.strip()}")
+        error_msg = result.stderr.strip()
+        print(f"[ERROR] Failed to requeue SLURM job {job_id}: {error_msg}")
+        # Provide helpful hints for common errors
+        if "presently disabled" in error_msg.lower() or "invalid" in error_msg.lower():
+            print("[HINT] On some clusters (e.g., Compute Canada), jobs must be submitted with "
+                  "'--requeue' flag (or '#SBATCH --requeue') to allow requeuing.")
+            print("[HINT] Add 'requeue: true' to additional_parameters in your Hydra launcher config.")
         return False
 
     print(f"[INFO] Requeued SLURM job {job_id}")

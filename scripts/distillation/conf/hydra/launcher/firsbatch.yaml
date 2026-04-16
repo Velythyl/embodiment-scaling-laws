@@ -15,6 +15,7 @@ name: ${hydra.job.name}
 array_parallelism: 999 # max num of tasks to run in parallel (via job array)
 additional_parameters:
   exclude: "fc10617,fc11001,fc10606" #fc10901,fc10713"
+  requeue: true  # Required on Compute Canada clusters to allow scontrol requeue
 setup:
   - "export WANDB_DIR=${hydra.sweep.dir}"
   - "export HYDRA_SWEEP_DIR=${hydra.sweep.dir}"

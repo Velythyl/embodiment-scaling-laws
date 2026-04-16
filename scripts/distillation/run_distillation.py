@@ -1158,10 +1158,10 @@ def main(cfg: DictConfig):
         checkpoint_metadata = checkpoint.get("metadata") or {}
         if checkpoint_metadata.get("best_val_loss") is not None:
             initial_best_val_loss = checkpoint_metadata["best_val_loss"]
-        # Get last logged iteration to avoid duplicate wandb data points
+        # Get last iteration to resume from (skip already-trained iterations)
         if checkpoint_metadata.get("last_iteration") is not None:
             resume_from_iteration = checkpoint_metadata["last_iteration"] + 1
-            print(f"[INFO] Will skip logging until iteration {resume_from_iteration} to avoid duplicates")
+            print(f"[INFO] Will skip training until iteration {resume_from_iteration} (already trained)")
         print(f"[INFO] Loaded checkpoint from {resume_checkpoint_path}, resuming from epoch {start_epoch}")
     else:
         # Save initial (untrained) policy

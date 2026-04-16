@@ -71,7 +71,7 @@ def _start_background_rsync(source_dir: str, target_dir: str) -> "subprocess.Pop
     # Uses find + xargs for parallel directory-level rsync (P64 = 64 parallel rsyncs)
     cmd = (
         f'find "{source_dir}" -mindepth 1 -maxdepth 1 -print0 | '
-        f'xargs -0 -P64 -I% rsync --quiet -Pa % "{target_dir}"'
+        f'xargs -0 -P1 -I% rsync --quiet -Pa % "{target_dir}"'
     )
     
     print(f"[INFO] Starting background rsync from {source_dir} to {target_dir}")

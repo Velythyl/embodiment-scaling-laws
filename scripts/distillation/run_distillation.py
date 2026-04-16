@@ -510,8 +510,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
     
     Args:
         walltime_deadline: time.monotonic() value when we should stop for walltime, or None if disabled.
-        resume_from_iteration: Skip wandb logging until we reach this iteration.
-            Used to avoid duplicate data points when resuming mid-epoch.
+        resume_from_iteration: Skip training steps (forward/backward/optimizer/scheduler) until
+            we reach this iteration. Used when resuming mid-epoch to avoid double-training
+            and ensure requeued runs do the same total training as uninterrupted runs.
     """
     scaler = scaler or torch.cuda.amp.GradScaler(enabled=use_amp)
 
@@ -578,12 +579,28 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
             iteration_start_time = time.time()
             _batch_fetch_start = time.time()
             next_log_pct = log_epoch_pct
+            skipped_iterations = 0  # Track how many iterations we skip when catching up
             for index, (batch_inputs, batch_targets, data_source_name, io_times, processing_times) in enumerate(pbar):
                 _batch_fetch_time = time.time() - _batch_fetch_start
                 if _batch_fetch_time > 10.0:
                     print(f"[STALL] Batch {index} took {_batch_fetch_time:.1f}s to fetch from dataloader", flush=True)
                 iteration = index + epoch * len(train_dataloader)
                 dataloader_time = time.time() - iteration_start_time
+
+                # Skip training steps when resuming mid-epoch to avoid double-training
+                # and corrupting the scheduler. Only iterate through data to maintain epoch structure.
+                if iteration < resume_from_iteration:
+                    skipped_iterations += 1
+                    if skipped_iterations == 1:
+                        print(f"[INFO] Skipping training until iteration {resume_from_iteration} (currently at {iteration})")
+                    pbar.set_postfix({"Status": f"Catching up ({iteration}/{resume_from_iteration})"})
+                    iteration_start_time = time.time()
+                    _batch_fetch_start = time.time()
+                    continue
+
+                if skipped_iterations > 0 and iteration == resume_from_iteration:
+                    print(f"[INFO] Caught up! Skipped {skipped_iterations} iterations. Resuming training at iteration {iteration}")
+                    skipped_iterations = 0  # Reset so we don't print again
 
                 # Data already on GPU via CudaPrefetcher (non-blocking H2D overlap)
                 move_cuda_time = 0.0
@@ -638,10 +655,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                 # Update progress bar with current loss
                 pbar.set_postfix({"Loss": f"{get_meter_dict_avg(train_loss_meters):.4f}"})
 
-                # Log times - skip if we're catching up from a resume to avoid duplicate data points
+                # Log training metrics
                 current_pct = 100.0 * (index + 1) / len(train_dataloader)
-                should_log_this_iteration = iteration >= resume_from_iteration
-                if should_log_this_iteration and (current_pct >= next_log_pct or index == 0):
+                if current_pct >= next_log_pct or index == resume_from_iteration % len(train_dataloader):
                     next_log_pct = current_pct - (current_pct % log_epoch_pct) + log_epoch_pct
                     log_dict = {
                         "Train/times/io_per_thread": io_times.mean().item(),
@@ -665,11 +681,9 @@ def train(policy, criterion, optimizer, scheduler, train_dataset, val_dataset, t
                     last_logged_iteration = iteration
                     train_bps = (index + 1) / (time.time() - train_phase_start_time)
                     print(f"[PROGRESS] Epoch {epoch+1}/{num_epochs} - Train: {current_pct:.1f}% ({index+1}/{len(train_dataloader)}) | Loss: {loss.item():.4f} | {train_bps:.2f} batch/s")
-                elif not should_log_this_iteration and index == 0:
-                    print(f"[INFO] Skipping logging until iteration {resume_from_iteration} (currently at {iteration})")
 
-                # Mid-epoch validation/test evaluation - also skip if catching up
-                if should_log_this_iteration and eval_epoch_pct is not None and eval_epoch_pct > 0 and current_pct >= next_eval_pct:
+                # Mid-epoch validation/test evaluation
+                if eval_epoch_pct is not None and eval_epoch_pct > 0 and current_pct >= next_eval_pct:
                     next_eval_pct = current_pct - (current_pct % eval_epoch_pct) + eval_epoch_pct
                     epoch_progress = epoch + (index + 1) / len(train_dataloader)
                     print(f"[INFO] Mid-epoch eval at {current_pct:.1f}% of epoch {epoch + 1}")

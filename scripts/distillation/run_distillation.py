@@ -375,18 +375,37 @@ def _check_cuda_and_requeue_if_broken():
         print("[WARN] CUDA not available and not running under SLURM")
         return
     
-    print("[ERROR] CUDA is not available but we're running in a SLURM job!")
-    print("[ERROR] This node likely has broken/missing CUDA drivers.")
+    # Get node name for logging
+    node_name = os.environ.get("SLURMD_NODENAME")
+    if not node_name:
+        import socket
+        node_name = socket.gethostname()
+    
+    print("\n" + "=" * 60)
+    print("CUDA DRIVER FAILURE DETECTED - REQUEUE TRIGGERED")
+    print("=" * 60)
+    print(f"[ERROR] torch.cuda.is_available() returned False")
+    print(f"[ERROR] Node: {node_name}")
+    print(f"[ERROR] SLURM Job ID: {job_id}")
+    print(f"[ERROR] This node likely has broken/missing CUDA drivers.")
+    print(f"[INFO] Will exclude this node and requeue the job.")
+    print("=" * 60 + "\n")
     sys.stdout.flush()
     
     requeue_succeeded = _exclude_current_node_and_requeue()
     if requeue_succeeded:
-        print("[INFO] Job requeued with bad node excluded. Exiting.")
+        print("\n" + "=" * 60)
+        print("REQUEUE SUCCESSFUL - CUDA DRIVER ISSUE")
+        print("=" * 60)
+        print(f"[INFO] Job requeued due to missing CUDA drivers on node {node_name}")
+        print(f"[INFO] Node {node_name} has been added to exclude list")
+        print(f"[INFO] Job will restart on a different node")
+        print("=" * 60 + "\n")
         sys.stdout.flush()
         sys.exit(0)
     else:
         raise RuntimeError(
-            "CUDA not available and failed to requeue. "
+            f"CUDA not available on node {node_name} and failed to requeue. "
             "This node may have broken CUDA drivers."
         )
 

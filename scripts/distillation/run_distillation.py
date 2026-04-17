@@ -289,6 +289,108 @@ def _requeue_current_slurm_job():
     return True
 
 
+def _exclude_current_node_and_requeue():
+    """Exclude the current node from the job's node list and requeue.
+    
+    This is used when a node has broken CUDA drivers. We add the current node
+    to the job's exclude list so SLURM won't schedule us there again, then requeue.
+    
+    Returns:
+        bool: True if both exclude and requeue succeeded, False otherwise.
+    """
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        print("[WARN] Not running under SLURM; cannot exclude node")
+        return False
+    
+    # Get current node name - use SLURMD_NODENAME (not SLURM_NODELIST which can be compressed)
+    node_name = os.environ.get("SLURMD_NODENAME")
+    if not node_name:
+        import socket
+        node_name = socket.gethostname()
+    
+    print(f"[WARN] CUDA not available on node {node_name}, will exclude and requeue")
+    sys.stdout.flush()
+    
+    import subprocess
+    
+    # First, get the current exclude list for this job (if any)
+    result = subprocess.run(
+        ["scontrol", "show", "job", job_id],
+        capture_output=True, text=True
+    )
+    current_exclude = ""
+    if result.returncode == 0:
+        for line in result.stdout.split("\n"):
+            if "ExcNodeList=" in line:
+                # Parse ExcNodeList=<nodes> from the line
+                for part in line.split():
+                    if part.startswith("ExcNodeList="):
+                        current_exclude = part.split("=", 1)[1]
+                        break
+                break
+    
+    # Build new exclude list with deduplication
+    if current_exclude and current_exclude != "(null)":
+        exclude_set = set(current_exclude.split(","))
+    else:
+        exclude_set = set()
+    exclude_set.add(node_name)
+    new_exclude = ",".join(sorted(exclude_set))
+    
+    print(f"[INFO] Updating job {job_id} ExcNodeList to: {new_exclude}")
+    sys.stdout.flush()
+    
+    # Update the job's exclude list
+    result = subprocess.run(
+        ["scontrol", "update", f"JobId={job_id}", f"ExcNodeList={new_exclude}"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"[ERROR] Failed to update ExcNodeList: {result.stderr.strip()}")
+        # Try to requeue anyway - maybe it will land on a different node
+    else:
+        print(f"[INFO] Successfully excluded node {node_name} from job {job_id}")
+    
+    # Now requeue the job
+    return _requeue_current_slurm_job()
+
+
+def _check_cuda_and_requeue_if_broken():
+    """Check if CUDA is available; if not and we're in SLURM, exclude node and requeue.
+    
+    This handles the case where a node has broken/missing CUDA drivers.
+    Should be called early in main() before any CUDA operations.
+    
+    Exits with code 0 if requeue was successful (job will restart on different node).
+    Returns normally if CUDA is available or if we're not in SLURM.
+    Raises RuntimeError if requeue fails.
+    """
+    if torch.cuda.is_available():
+        return  # All good
+    
+    job_id = os.environ.get("SLURM_JOB_ID")
+    if not job_id:
+        # Not in SLURM - just continue, the code will use CPU or fail later
+        print("[WARN] CUDA not available and not running under SLURM")
+        return
+    
+    print("[ERROR] CUDA is not available but we're running in a SLURM job!")
+    print("[ERROR] This node likely has broken/missing CUDA drivers.")
+    sys.stdout.flush()
+    
+    requeue_succeeded = _exclude_current_node_and_requeue()
+    if requeue_succeeded:
+        print("[INFO] Job requeued with bad node excluded. Exiting.")
+        sys.stdout.flush()
+        sys.exit(0)
+    else:
+        raise RuntimeError(
+            "CUDA not available and failed to requeue. "
+            "This node may have broken CUDA drivers."
+        )
+
+
 def _parse_slurm_time(t):
     """Parse SLURM time format (D-HH:MM:SS or HH:MM:SS or MM:SS) to seconds."""
     if t == "UNLIMITED" or t == "INVALID":
@@ -862,6 +964,9 @@ def main(cfg: DictConfig):
     print("="*50)
     print(OmegaConf.to_yaml(cfg, resolve=True))
     print("="*50 + "\n")
+
+    # Check CUDA availability early - if broken, exclude this node and requeue
+    _check_cuda_and_requeue_if_broken()
 
     # Start background rsync to copy data from SCRATCH to local fast storage
     # Training will start immediately using fallback (SCRATCH) while data syncs

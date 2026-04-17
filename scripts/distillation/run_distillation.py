@@ -330,13 +330,13 @@ def _exclude_current_node_and_requeue():
                         break
                 break
     
-    # Build new exclude list with deduplication
+    # Build new exclude list - just append without parsing
+    # (SLURM ExcNodeList can be in compressed format like fc[10606,10617] which
+    # we must not try to split by comma)
     if current_exclude and current_exclude != "(null)":
-        exclude_set = set(current_exclude.split(","))
+        new_exclude = f"{current_exclude},{node_name}"
     else:
-        exclude_set = set()
-    exclude_set.add(node_name)
-    new_exclude = ",".join(sorted(exclude_set))
+        new_exclude = node_name
     
     print(f"[INFO] Updating job {job_id} ExcNodeList to: {new_exclude}")
     sys.stdout.flush()

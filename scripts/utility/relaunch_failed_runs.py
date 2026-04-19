@@ -46,19 +46,25 @@ def get_epoch_count(run) -> Optional[int]:
     return None
 
 
-def get_current_slurm_job_count() -> int:
-    """Get the current number of SLURM jobs for the user."""
+def get_current_slurm_job_ids() -> Set[str]:
+    """Get the current SLURM job IDs (base job ID, not array indices)."""
     try:
         result = subprocess.run(
-            ["squeue", "--me", "-h"],
+            ["squeue", "--me", "-h", "-o", "%A"],  # Just job IDs
             capture_output=True,
             text=True,
         )
         if result.returncode == 0:
-            return len([l for l in result.stdout.strip().split("\n") if l.strip()])
+            # Extract base job ID (strip array index like _[0-5] or _0)
+            ids = set()
+            for line in result.stdout.strip().split("\n"):
+                if line.strip():
+                    base_id = line.split("_")[0]  # Get base job ID
+                    ids.add(base_id)
+            return ids
     except Exception:
         pass
-    return 0
+    return set()
 
 
 def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: str,
@@ -104,8 +110,8 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
         print("[DRY-RUN] Would launch this command")
         return True
     
-    # Get initial job count
-    initial_jobs = get_current_slurm_job_count()
+    # Get initial job IDs
+    initial_job_ids = get_current_slurm_job_ids()
     
     # Launch the process
     process = subprocess.Popen(
@@ -133,13 +139,14 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
             break
         
         # Check if new jobs appeared
-        current_jobs = get_current_slurm_job_count()
-        if current_jobs > initial_jobs:
-            print(f"Detected new SLURM jobs ({initial_jobs} -> {current_jobs}) after {elapsed}s")
+        current_job_ids = get_current_slurm_job_ids()
+        new_jobs = current_job_ids - initial_job_ids
+        if new_jobs:
+            print(f"Detected new SLURM job IDs: {new_jobs} after {elapsed}s")
             submitted = True
             break
         
-        print(f"  Waiting... ({elapsed}s elapsed, jobs: {current_jobs})")
+        print(f"  Waiting... ({elapsed}s elapsed, jobs: {len(current_job_ids)})")
     
     # Kill process if still running
     if process.poll() is None:

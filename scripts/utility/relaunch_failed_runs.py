@@ -61,8 +61,8 @@ def get_current_slurm_job_count() -> int:
 
 
 def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: str,
-               scripts_dir: str, wait_for_submission: int = 60, check_interval: int = 2, 
-               dry_run: bool = False) -> bool:
+               scripts_dir: str, timeout_min: int = 719, wait_for_submission: int = 60,
+               check_interval: int = 2, dry_run: bool = False) -> bool:
     """
     Launch a Hydra multirun job and wait for SLURM submission.
     
@@ -76,7 +76,7 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
         "+hydra/sweep=sbatch",
         "hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher",
         "hydra.launcher.tasks_per_node=1",
-        "+hydra.launcher.timeout_min=719",
+        f"+hydra.launcher.timeout_min={timeout_min}",
         "hydra.launcher.cpus_per_task=6",
         "hydra.launcher.mem_gb=128",
         "hydra.launcher.array_parallelism=300",
@@ -186,6 +186,12 @@ def main():
         "--dry-run",
         action="store_true",
         help="Show what would be launched without actually launching",
+    )
+    parser.add_argument(
+        "--timeout-min",
+        type=int,
+        default=719,
+        help="SLURM job timeout in minutes (default: 719)",
     )
     
     args = parser.parse_args()
@@ -311,6 +317,7 @@ def main():
                 seeds_str=seeds_str,
                 project=args.project,
                 scripts_dir=scripts_dir,
+                timeout_min=args.timeout_min,
                 dry_run=args.dry_run,
             )
             

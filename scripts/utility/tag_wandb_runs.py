@@ -15,9 +15,17 @@ This script:
 import argparse
 import subprocess
 from collections import defaultdict
-from typing import Dict, Set, Optional
+from typing import Dict, List, Set, Optional
 
 import wandb
+
+# All AUTOTAG tags - only one should be present at a time
+AUTOTAGS = [
+    "DONE_AUTOTAG",
+    "RUNNING_AUTOTAG",
+    "REQUEUED_AUTOTAG",
+    "MAYBE_DELETE_AUTOTAG",
+]
 
 
 def get_running_slurm_jobs(debug: bool = False) -> Set[str]:
@@ -87,27 +95,44 @@ def get_slurm_job_id(run: wandb.apis.public.Run, debug: bool = False) -> Optiona
     return f"{array_job_id}_{array_task_id}"
 
 
-def add_tag_to_run(run: wandb.apis.public.Run, tag: str, dry_run: bool = False) -> bool:
+def set_autotag(run: wandb.apis.public.Run, tag: str, dry_run: bool = False) -> bool:
     """
-    Add a tag to a run if it doesn't already have it.
+    Set an AUTOTAG on a run, removing any other AUTOTAGs first.
+    
+    Only one AUTOTAG should be present at a time.
     
     Returns:
-        True if tag was added (or would be in dry_run mode), False if already present.
+        True if changes were made (or would be in dry_run mode), False if already correct.
     """
     current_tags = list(run.tags) if run.tags else []
     
-    if tag in current_tags:
+    # Check if already has the correct tag and no other autotags
+    has_target_tag = tag in current_tags
+    other_autotags = [t for t in current_tags if t in AUTOTAGS and t != tag]
+    
+    if has_target_tag and not other_autotags:
+        # Already in correct state
         return False
     
-    new_tags = current_tags + [tag]
+    # Remove all autotags, then add the target one
+    new_tags = [t for t in current_tags if t not in AUTOTAGS]
+    new_tags.append(tag)
+    
+    removed_tags = [t for t in current_tags if t in AUTOTAGS and t != tag]
     
     if dry_run:
-        print(f"  [DRY-RUN] Would add tag '{tag}' to run {run.id} ({run.name})")
+        if removed_tags:
+            print(f"  [DRY-RUN] Would remove tags {removed_tags} and add '{tag}' to run {run.id} ({run.name})")
+        else:
+            print(f"  [DRY-RUN] Would add tag '{tag}' to run {run.id} ({run.name})")
         return True
     else:
         run.tags = new_tags
         run.save()
-        print(f"  Added tag '{tag}' to run {run.id} ({run.name})")
+        if removed_tags:
+            print(f"  Removed {removed_tags}, added '{tag}' to run {run.id} ({run.name})")
+        else:
+            print(f"  Added tag '{tag}' to run {run.id} ({run.name})")
         return True
 
 
@@ -175,20 +200,26 @@ def main():
     parser.add_argument(
         "--tag-done",
         type=str,
-        default="done",
-        help="Tag to apply to completed runs (default: 'done')",
+        default="DONE_AUTOTAG",
+        help="Tag to apply to completed runs (default: 'DONE_AUTOTAG')",
+    )
+    parser.add_argument(
+        "--tag-running",
+        type=str,
+        default="RUNNING_AUTOTAG",
+        help="Tag to apply to currently running wandb runs (default: 'RUNNING_AUTOTAG')",
     )
     parser.add_argument(
         "--tag-requeued",
         type=str,
-        default="REQUEUED",
-        help="Tag to apply to runs with active SLURM jobs (default: 'REQUEUED')",
+        default="REQUEUED_AUTOTAG",
+        help="Tag to apply to runs with active SLURM jobs but not currently running (default: 'REQUEUED_AUTOTAG')",
     )
     parser.add_argument(
         "--tag-maybe-delete",
         type=str,
-        default="MAYBE_DELETE",
-        help="Tag to apply to runs without active SLURM jobs (default: 'MAYBE_DELETE')",
+        default="MAYBE_DELETE_AUTOTAG",
+        help="Tag to apply to runs without active SLURM jobs (default: 'MAYBE_DELETE_AUTOTAG')",
     )
     parser.add_argument(
         "--filters",
@@ -254,6 +285,7 @@ def main():
     stats = {
         "total": len(runs_list),
         "done": 0,
+        "running": 0,
         "requeued": 0,
         "maybe_delete": 0,
         "no_epoch": 0,
@@ -276,20 +308,31 @@ def main():
             "slurm_job_id": slurm_job_id,
         })
         
+        # Check if wandb run is currently running
+        is_wandb_running = run.state == "running"
+        
         print(f"\nRun: {run.name} (id: {run.id})")
         print(f"  Config: {config_name}, Ablation: {ablation_name}")
-        print(f"  Epoch: {epoch}, SLURM Job: {slurm_job_id}")
+        print(f"  Epoch: {epoch}, SLURM Job: {slurm_job_id}, WandB state: {run.state}")
         print(f"  Current tags: {run.tags}")
         
         # Check if run is done (epoch >= threshold)
         if epoch is not None and epoch >= args.epoch_threshold:
-            if add_tag_to_run(run, args.tag_done, dry_run=args.dry_run):
+            if set_autotag(run, args.tag_done, dry_run=args.dry_run):
                 stats["done"] += 1
             else:
                 stats["already_tagged"] += 1
             continue
         
-        # Run is not done - check SLURM status
+        # Check if wandb run is currently running (active heartbeat)
+        if is_wandb_running:
+            if set_autotag(run, args.tag_running, dry_run=args.dry_run):
+                stats["running"] += 1
+            else:
+                stats["already_tagged"] += 1
+            continue
+        
+        # Run is not done and not currently running - check SLURM status
         if epoch is None:
             print(f"  [WARNING] No epoch data found")
             stats["no_epoch"] += 1
@@ -299,10 +342,7 @@ def main():
             stats["no_slurm_id"] += 1
             continue
         
-        # Check if SLURM job is running
-        print(running_slurm_jobs)
-       # exit()
-
+        # Check if SLURM job is running/pending
         is_slurm_job_id_in_running_slurm_jobs = False
         for running_slurm_job in running_slurm_jobs:
             if running_slurm_job.startswith(slurm_job_id):
@@ -310,12 +350,12 @@ def main():
                 break
 
         if is_slurm_job_id_in_running_slurm_jobs:
-            if add_tag_to_run(run, args.tag_requeued, dry_run=args.dry_run):
+            if set_autotag(run, args.tag_requeued, dry_run=args.dry_run):
                 stats["requeued"] += 1
             else:
                 stats["already_tagged"] += 1
         else:
-            if add_tag_to_run(run, args.tag_maybe_delete, dry_run=args.dry_run):
+            if set_autotag(run, args.tag_maybe_delete, dry_run=args.dry_run):
                 stats["maybe_delete"] += 1
             else:
                 stats["already_tagged"] += 1
@@ -326,6 +366,7 @@ def main():
     print("=" * 80)
     print(f"Total runs processed: {stats['total']}")
     print(f"Tagged as '{args.tag_done}': {stats['done']}")
+    print(f"Tagged as '{args.tag_running}': {stats['running']}")
     print(f"Tagged as '{args.tag_requeued}': {stats['requeued']}")
     print(f"Tagged as '{args.tag_maybe_delete}': {stats['maybe_delete']}")
     print(f"Already had correct tag: {stats['already_tagged']}")

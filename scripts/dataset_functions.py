@@ -185,8 +185,6 @@ class LocomotionDataset(Dataset):
         
         self.folder_paths = np.array(folder_paths)
         self.max_files_in_memory = max_files_in_memory
-        self.metadata_list = np.array([self._load_metadata(folder_path) for folder_path in folder_paths])   # use numpy to avoid copy-on-write behavior of python list
-        # self.metadata_list = [self._load_metadata(folder_path) for folder_path in folder_paths]
         self.max_parallel_envs_per_file = max_parallel_envs_per_file
         self.max_envs_per_file_in_memory = max_envs_per_file_in_memory
         # assert self.max_envs_per_file_in_memory <= self.max_parallel_envs_per_file, \
@@ -199,8 +197,12 @@ class LocomotionDataset(Dataset):
         self.total_samples = 0
 
         # Fallback dataset directory for loading from $SCRATCH when local copy is corrupted/truncated
+        # Note: must be set before _load_metadata is called so fallback can be used
         self.dataset_dir = dataset_dir
         self.fallback_dataset_dir = fallback_dataset_dir
+
+        self.metadata_list = np.array([self._load_metadata(folder_path) for folder_path in folder_paths])   # use numpy to avoid copy-on-write behavior of python list
+        # self.metadata_list = [self._load_metadata(folder_path) for folder_path in folder_paths]
         self._fallback_count = 0  # track how many times fallback was used
 
         # Robot description parameters for limb shape conditioning
@@ -244,6 +246,7 @@ class LocomotionDataset(Dataset):
     def _load_metadata(self, folder_path):
         """
         Load metadata from the YAML file in a dataset folder.
+        Falls back to fallback_dataset_dir if the primary path doesn't exist.
 
         Args:
             folder_path (str): Path to the folder.
@@ -253,7 +256,20 @@ class LocomotionDataset(Dataset):
         """
         metadata_path = os.path.join(folder_path, "metadata.yaml")
         if not os.path.exists(metadata_path):
-            raise FileNotFoundError(f"[ERROR]: Metadata file not found at {metadata_path}")
+            # Try fallback path
+            fallback_folder = self._get_fallback_path(folder_path)
+            if fallback_folder:
+                fallback_metadata_path = os.path.join(fallback_folder, "metadata.yaml")
+                if os.path.exists(fallback_metadata_path):
+                    print(f"[INFO] Using fallback metadata: {fallback_metadata_path}")
+                    metadata_path = fallback_metadata_path
+                else:
+                    raise FileNotFoundError(
+                        f"[ERROR]: Metadata file not found at {metadata_path} "
+                        f"or fallback {fallback_metadata_path}"
+                    )
+            else:
+                raise FileNotFoundError(f"[ERROR]: Metadata file not found at {metadata_path}")
 
         with open(metadata_path, "r") as metadata_file:
             metadata = yaml.safe_load(metadata_file)

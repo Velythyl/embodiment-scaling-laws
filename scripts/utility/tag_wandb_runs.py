@@ -108,7 +108,7 @@ def get_slurm_job_id(run: wandb.apis.public.Run, debug: bool = False) -> Optiona
         return None
     
     # Ensure both are converted to string and formatted consistently
-    return f"{int(array_job_id)}_{int(array_task_id)}"
+    return f"{array_job_id}_{array_task_id}"
 
 
 def add_tag_to_run(run: wandb.apis.public.Run, tag: str, dry_run: bool = False) -> bool:
@@ -324,7 +324,15 @@ def main():
             continue
         
         # Check if SLURM job is running
-        if slurm_job_id in running_slurm_jobs:
+        print(running_slurm_jobs)
+
+        is_slurm_job_id_in_running_slurm_jobs = False
+        for running_slurm_job in running_slurm_jobs:
+            if running_slurm_job.startswith(slurm_job_id):
+                is_slurm_job_id_in_running_slurm_jobs = True
+                break
+
+        if is_slurm_job_id_in_running_slurm_jobs:
             if add_tag_to_run(run, args.tag_requeued, dry_run=args.dry_run):
                 stats["requeued"] += 1
             else:

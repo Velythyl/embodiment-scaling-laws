@@ -325,6 +325,7 @@ def main():
         
         # Check if SLURM job is running
         print(running_slurm_jobs)
+        exit()
 
         is_slurm_job_id_in_running_slurm_jobs = False
         for running_slurm_job in running_slurm_jobs:

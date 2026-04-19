@@ -438,10 +438,42 @@ class LocomotionDataset(Dataset):
             return torch.zeros((len(joint_names), self.extra_des_dim), dtype=torch.float32)
         return torch.from_numpy(cached)
 
+    def _list_h5_files(self, folder_path):
+        """List HDF5 files in a folder, with fallback to fallback_dataset_dir."""
+        def list_h5(path):
+            if not os.path.isdir(path):
+                return []
+            return sorted(
+                [
+                    f.decode("utf-8") if isinstance(f, bytes) else f
+                    for f in os.listdir(path)
+                    if (isinstance(f, bytes) and f.endswith(b".h5")) or (isinstance(f, str) and f.endswith(".h5"))
+                ],
+                key=lambda x: int(x.split('_')[-1].split('.')[0])
+            )
+
+        # Try primary path
+        hdf5_files = list_h5(folder_path)
+        if hdf5_files:
+            return folder_path, hdf5_files
+
+        # Try fallback path
+        fallback_folder = self._get_fallback_path(folder_path)
+        if fallback_folder:
+            hdf5_files = list_h5(fallback_folder)
+            if hdf5_files:
+                print(f"[INFO] Using fallback folder for H5 listing: {fallback_folder}")
+                return fallback_folder, hdf5_files
+            raise FileNotFoundError(
+                f"[ERROR]: No H5 files found at {folder_path} or fallback {fallback_folder}"
+            )
+        raise FileNotFoundError(f"[ERROR]: No H5 files found at {folder_path}")
+
     def _prepare_file_indices(self):
         """
         Create a mapping of file indices to (folder_idx, file_idx).
         Segregates files into train/validation sets based on val_ratio.
+        Falls back to fallback_dataset_dir if primary path has no files.
         """
         self.file_indices = {}
         self.folder_idx_to_file_name = {}
@@ -449,14 +481,10 @@ class LocomotionDataset(Dataset):
             # example path: 'logs/rsl_rl/Gendog10_gendog__KneeNum_fl0_fr0_rl0_rr0__ScaleJointLimit_fl0_fr0_rl0_rr0_1_0__Geo_lengthen_calf_0_4/2024-12-15_15-19-08/h5py_record'
             self.folder_idx_to_file_name[folder_idx] = folder_path.split("/")[-3]
             metadata = self.metadata_list[folder_idx]
-            hdf5_files = sorted(
-                [
-                    f.decode("utf-8") if isinstance(f, bytes) else f
-                    for f in os.listdir(folder_path)
-                    if (isinstance(f, bytes) and f.endswith(b".h5")) or (isinstance(f, str) and f.endswith(".h5"))
-                ],
-                key=lambda x: int(x.split('_')[-1].split('.')[0])
-            )
+            
+            # Get H5 files with fallback support
+            actual_folder_path, hdf5_files = self._list_h5_files(folder_path)
+            
             total_files = len(hdf5_files)
             num_val_files = int(total_files * self.val_ratio)
             if num_val_files == 0:
@@ -483,12 +511,13 @@ class LocomotionDataset(Dataset):
                      f"should be <= parallel_envs = {parallel_envs}")
                 index = np.random.randint(0, parallel_envs - self.max_envs_per_file_in_memory + 1)
                 slice_key = key + (index,)
-                self.file_indices[slice_key] = (folder_path, file_name, steps_per_file, parallel_envs)
+                # Use actual_folder_path (may be fallback) instead of original folder_path
+                self.file_indices[slice_key] = (actual_folder_path, file_name, steps_per_file, parallel_envs)
                 self.total_samples += steps_per_file * parallel_envs
 
         for k, v in self.file_indices.items():
             h5_path = os.path.join(v[0], v[1])
-            assert os.path.exists(h5_path)
+            assert os.path.exists(h5_path), f"H5 file not found: {h5_path}"
 
     def __len__(self):
         """

@@ -223,12 +223,12 @@ def main():
         expected_configs: Set[str] = set(args.config_names)
         print(f"Using provided config names: {sorted(expected_configs)}")
     else:
-        # Auto-discover from conf/ directory (yaml files, excluding config.yaml and test_requeue.yaml)
-        config_files = glob.glob(os.path.join(conf_dir, "*.yaml"))
+        # Auto-discover: only all_robot_jobs_v7_allrobots_* configs (excluding test_set)
+        config_files = glob.glob(os.path.join(conf_dir, "all_robot_jobs_v7_allrobots_*.yaml"))
         expected_configs = set()
         for f in config_files:
             basename = os.path.basename(f)
-            if basename in ("config.yaml", "test_requeue.yaml"):
+            if "test_set" in basename:
                 continue
             # Config name is the filename without .yaml extension
             config_name = basename.replace(".yaml", "")

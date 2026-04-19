@@ -28,6 +28,7 @@ AUTOTAGS = [
     "RUNNING_AUTOTAG",
     "REQUEUED_AUTOTAG",
     "MAYBE_DELETE_AUTOTAG",
+    "SHOULD_CANCEL_AUTOTAG",
 ]
 
 
@@ -241,6 +242,11 @@ def main():
         action="store_true",
         help="Print debug information about SLURM job ID matching",
     )
+    parser.add_argument(
+        "--scancel-jobs-for-done-categories",
+        action="store_true",
+        help="Also run scancel for jobs in categories that already have enough done runs",
+    )
     
     args = parser.parse_args()
     
@@ -408,7 +414,7 @@ def main():
     print("RUNS GROUPED BY (CONFIG, ABLATION)")
     print("=" * 80)
     
-    jobs_to_cancel: List[Tuple[str, str, str, str]] = []  # (config, ablation, slurm_job_id, run_name)
+    jobs_to_cancel: List[Tuple[str, str, str, dict]] = []  # (config, ablation, slurm_job_id, run_info)
     
     for (config_name, ablation_name), run_infos in sorted(groups.items()):
         done_count = sum(1 for r in run_infos if r["final_tag"] == args.tag_done)
@@ -429,53 +435,78 @@ def main():
         
         # If we already have enough done runs, cancel requeued and running runs
         if done_count >= args.target_seeds and (requeued_count > 0 or running_count > 0):
-            print(f"  [CANCEL] Category has {done_count} done runs (target: {args.target_seeds}), will cancel {requeued_count} requeued + {running_count} running runs")
+            print(f"  [CANCEL] Category has {done_count} done runs (target: {args.target_seeds}), will tag {requeued_count} requeued + {running_count} running runs for cancellation")
             for r in run_infos:
                 if r["final_tag"] in (args.tag_requeued, args.tag_running) and r["slurm_job_id"] is not None:
-                    jobs_to_cancel.append((config_name, ablation_name, r["slurm_job_id"], r["run"].name))
+                    jobs_to_cancel.append((config_name, ablation_name, r["slurm_job_id"], r))
     
-    # Cancel SLURM jobs for requeued/running runs in completed categories
+    # Tag runs for cancellation instead of directly cancelling
     if jobs_to_cancel:
         print("\n" + "=" * 80)
-        print("CANCELLING REQUEUED/RUNNING SLURM JOBS FOR COMPLETED CATEGORIES")
+        print("TAGGING REQUEUED/RUNNING RUNS AS SHOULD_CANCEL FOR COMPLETED CATEGORIES")
         print("=" * 80)
-        print(f"\nFound {len(jobs_to_cancel)} SLURM jobs to cancel")
+        print(f"\nFound {len(jobs_to_cancel)} runs to tag for cancellation")
         
-        cancelled = 0
+        tagged = 0
         failed = 0
         
-        for config_name, ablation_name, slurm_job_id, run_name in jobs_to_cancel:
-            print(f"\n  Cancelling job {slurm_job_id} ({config_name} / {ablation_name})")
-            print(f"    Run name: {run_name}")
+        for config_name, ablation_name, slurm_job_id, run_info in jobs_to_cancel:
+            run = run_info["run"]
+            print(f"\n  Tagging run {run.name} ({config_name} / {ablation_name})")
+            print(f"    SLURM job: {slurm_job_id}")
             
-            if args.dry_run:
-                print(f"    [DRY-RUN] Would run: scancel {slurm_job_id}")
-                cancelled += 1
+            if set_autotag(run, "SHOULD_CANCEL_AUTOTAG", dry_run=args.dry_run):
+                run_info["final_tag"] = "SHOULD_CANCEL_AUTOTAG"
+                tagged += 1
             else:
-                try:
-                    result = subprocess.run(
-                        ["scancel", slurm_job_id],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if result.returncode == 0:
-                        print(f"    Successfully cancelled")
-                        cancelled += 1
-                    else:
-                        print(f"    [WARNING] scancel returned error: {result.stderr}")
-                        failed += 1
-                except FileNotFoundError:
-                    print(f"    [ERROR] scancel command not found")
-                    failed += 1
-                except Exception as e:
-                    print(f"    [ERROR] Failed to cancel: {e}")
-                    failed += 1
+                # Already tagged correctly
+                tagged += 1
         
-        verb = "would cancel" if args.dry_run else "cancelled"
-        print(f"\nCancellation summary: {cancelled} {verb}, {failed} failed")
+        verb = "would tag" if args.dry_run else "tagged"
+        print(f"\nTagging summary: {tagged} {verb} as SHOULD_CANCEL_AUTOTAG")
+        
+        # Also scancel if requested
+        if args.scancel_jobs_for_done_categories:
+            print("\n" + "=" * 80)
+            print("SCANCELLING SLURM JOBS")
+            print("=" * 80)
+            
+            cancelled = 0
+            scancel_failed = 0
+            
+            for config_name, ablation_name, slurm_job_id, run_info in jobs_to_cancel:
+                print(f"\n  Cancelling job {slurm_job_id} ({config_name} / {ablation_name})")
+                
+                if args.dry_run:
+                    print(f"    [DRY-RUN] Would run: scancel {slurm_job_id}")
+                    cancelled += 1
+                else:
+                    try:
+                        result = subprocess.run(
+                            ["scancel", slurm_job_id],
+                            capture_output=True,
+                            text=True,
+                        )
+                        if result.returncode == 0:
+                            print(f"    Successfully cancelled")
+                            cancelled += 1
+                        else:
+                            print(f"    [WARNING] scancel returned error: {result.stderr}")
+                            scancel_failed += 1
+                    except FileNotFoundError:
+                        print(f"    [ERROR] scancel command not found")
+                        scancel_failed += 1
+                    except Exception as e:
+                        print(f"    [ERROR] Failed to cancel: {e}")
+                        scancel_failed += 1
+            
+            verb = "would cancel" if args.dry_run else "cancelled"
+            print(f"\nScancel summary: {cancelled} {verb}, {scancel_failed} failed")
+        else:
+            print(f"\nTo cancel these jobs, run: scancel <job_id> for each SLURM job, or use --scancel-jobs-for-done-categories")
     else:
         print("\n" + "=" * 80)
-        print("NO JOBS TO CANCEL")
+        print("NO RUNS TO TAG FOR CANCELLATION")
         print("=" * 80)
         print("\nAll requeued/running runs are for categories that still need more seeds.")
 

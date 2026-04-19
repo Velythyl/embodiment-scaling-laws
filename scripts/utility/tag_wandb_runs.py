@@ -3,19 +3,22 @@
 Script to tag wandb runs based on epoch count and SLURM job status.
 
 This script:
-1. Fetches all runs from the wandb project
-2. Groups them by config name and ablation name
-3. Tags runs with epoch >= 80 as "done"
-4. For runs with epoch < 80:
+1. Fetches all runs from multiple wandb projects (comma-separated)
+2. Groups them by (config_name, ablation_name)
+3. Tags runs with epoch >= threshold as "DONE_AUTOTAG"
+4. For runs with epoch < threshold:
    - Checks if their SLURM job is still running via squeue
-   - Tags as "REQUEUED" if running
-   - Tags as "MAYBE_DELETE" if not running
+   - Tags as "RUNNING_AUTOTAG" if wandb state is running
+   - Tags as "REQUEUED_AUTOTAG" if SLURM job is active
+   - Tags as "MAYBE_DELETE_AUTOTAG" if not running
+5. For categories that already have enough seeds done, cancels REQUEUED SLURM jobs
 """
 
 import argparse
+import json
 import subprocess
 from collections import defaultdict
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Tuple
 
 import wandb
 
@@ -184,7 +187,13 @@ def main():
         "--project",
         type=str,
         default="esl_apr10_requeue",
-        help="Wandb project name",
+        help="Wandb project name(s), comma-separated for multiple projects",
+    )
+    parser.add_argument(
+        "--target-seeds",
+        type=int,
+        default=5,
+        help="Target number of seeds per (config, ablation) pair (default: 5)",
     )
     parser.add_argument(
         "--epoch-threshold",
@@ -235,7 +244,11 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"Connecting to wandb: {args.entity}/{args.project}")
+    # Parse comma-separated projects
+    projects = [p.strip() for p in args.project.split(",")]
+    
+    print(f"Connecting to wandb: {args.entity}")
+    print(f"Projects to process: {projects}")
     
     # Initialize wandb API
     api = wandb.Api()
@@ -243,33 +256,37 @@ def main():
     # Build filters
     filters = {}
     if args.filters:
-        import json
         filters = json.loads(args.filters)
     
-    # Fetch all runs
-    print("Fetching runs...")
-    try:
-        runs = api.runs(f"{args.entity}/{args.project}", filters=filters)
-        runs_list = list(runs)
-    except ValueError as e:
-        if "Could not find project" in str(e):
-            print(f"\n[ERROR] Could not find project '{args.project}' under entity '{args.entity}'")
-            print("\nThis could be due to:")
-            print("  1. The project name is incorrect")
-            print("  2. The entity (username/team) is incorrect")
-            print("  3. You don't have access to this project")
-            print("  4. You need to login: run 'wandb login'")
-            print("\nTrying to list available projects for this entity...")
-            try:
-                entity = api.entity(args.entity)
-                projects = entity.projects()
-                print(f"\nAvailable projects for '{args.entity}':")
-                for proj in projects:
-                    print(f"  - {proj.name}")
-            except Exception as e2:
-                print(f"  Could not list projects: {e2}")
-            return
-        raise
+    # Fetch runs from all projects
+    print("Fetching runs from all projects...")
+    runs_list = []
+    for project in projects:
+        print(f"  Fetching from {project}...")
+        try:
+            runs = api.runs(f"{args.entity}/{project}", filters=filters)
+            project_runs = list(runs)
+            print(f"    Found {len(project_runs)} runs")
+            runs_list.extend(project_runs)
+        except ValueError as e:
+            if "Could not find project" in str(e):
+                print(f"\n[ERROR] Could not find project '{project}' under entity '{args.entity}'")
+                print("\nThis could be due to:")
+                print("  1. The project name is incorrect")
+                print("  2. The entity (username/team) is incorrect")
+                print("  3. You don't have access to this project")
+                print("  4. You need to login: run 'wandb login'")
+                print("\nTrying to list available projects for this entity...")
+                try:
+                    entity = api.entity(args.entity)
+                    proj_list = entity.projects()
+                    print(f"\nAvailable projects for '{args.entity}':")
+                    for proj in proj_list:
+                        print(f"  - {proj.name}")
+                except Exception as e2:
+                    print(f"  Could not list projects: {e2}")
+                return
+            raise
     
     print(f"Found {len(runs_list)} runs")
     
@@ -278,8 +295,9 @@ def main():
     running_slurm_jobs = get_running_slurm_jobs(debug=args.debug)
     print(f"Found {len(running_slurm_jobs)} running/pending SLURM jobs")
     
-    # Group runs by config name and ablation name
-    groups: Dict[str, Dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    # Group runs by (config_name, ablation_name) and track their status
+    # Key: (config_name, ablation_name) -> list of run info dicts
+    groups: Dict[Tuple[str, str], List[dict]] = defaultdict(list)
     
     # Statistics
     stats = {
@@ -302,11 +320,13 @@ def main():
         epoch = get_epoch_count(run)
         slurm_job_id = get_slurm_job_id(run, debug=args.debug)
         
-        groups[config_name][ablation_name].append({
+        run_info = {
             "run": run,
             "epoch": epoch,
             "slurm_job_id": slurm_job_id,
-        })
+            "final_tag": None,  # Will be set based on processing
+        }
+        groups[(config_name, ablation_name)].append(run_info)
         
         # Check if wandb run is currently running
         is_wandb_running = run.state == "running"
@@ -318,6 +338,7 @@ def main():
         
         # Check if run is done (epoch >= threshold)
         if epoch is not None and epoch >= args.epoch_threshold:
+            run_info["final_tag"] = args.tag_done
             if set_autotag(run, args.tag_done, dry_run=args.dry_run):
                 stats["done"] += 1
             else:
@@ -326,6 +347,7 @@ def main():
         
         # Check if wandb run is currently running (active heartbeat)
         if is_wandb_running:
+            run_info["final_tag"] = args.tag_running
             if set_autotag(run, args.tag_running, dry_run=args.dry_run):
                 stats["running"] += 1
             else:
@@ -338,23 +360,31 @@ def main():
             stats["no_epoch"] += 1
         
         if slurm_job_id is None:
-            print(f"  [WARNING] No SLURM job ID found")
+            print(f"  [WARNING] No SLURM job ID found, tagging as MAYBE_DELETE")
             stats["no_slurm_id"] += 1
+            run_info["final_tag"] = args.tag_maybe_delete
+            if set_autotag(run, args.tag_maybe_delete, dry_run=args.dry_run):
+                stats["maybe_delete"] += 1
+            else:
+                stats["already_tagged"] += 1
             continue
         
         # Check if SLURM job is running/pending
-        is_slurm_job_id_in_running_slurm_jobs = False
-        for running_slurm_job in running_slurm_jobs:
-            if running_slurm_job.startswith(slurm_job_id):
-                is_slurm_job_id_in_running_slurm_jobs = True
-                break
+        # Use exact match or prefix match with underscore to avoid false positives
+        # e.g. job "1234" should not match "12345_0"
+        is_slurm_job_id_in_running_slurm_jobs = (
+            slurm_job_id in running_slurm_jobs or
+            any(j.startswith(slurm_job_id + "_") for j in running_slurm_jobs)
+        )
 
         if is_slurm_job_id_in_running_slurm_jobs:
+            run_info["final_tag"] = args.tag_requeued
             if set_autotag(run, args.tag_requeued, dry_run=args.dry_run):
                 stats["requeued"] += 1
             else:
                 stats["already_tagged"] += 1
         else:
+            run_info["final_tag"] = args.tag_maybe_delete
             if set_autotag(run, args.tag_maybe_delete, dry_run=args.dry_run):
                 stats["maybe_delete"] += 1
             else:
@@ -373,17 +403,81 @@ def main():
     print(f"Missing epoch data: {stats['no_epoch']}")
     print(f"Missing SLURM job ID: {stats['no_slurm_id']}")
     
-    # Print grouped summary
+    # Print grouped summary and identify runs to cancel
     print("\n" + "=" * 80)
-    print("RUNS GROUPED BY CONFIG AND ABLATION")
+    print("RUNS GROUPED BY (CONFIG, ABLATION)")
     print("=" * 80)
     
-    for config_name, ablations in sorted(groups.items()):
-        print(f"\n{config_name}:")
-        for ablation_name, run_infos in sorted(ablations.items()):
-            epochs = [r["epoch"] for r in run_infos if r["epoch"] is not None]
-            epoch_str = f"epochs: {min(epochs)}-{max(epochs)}" if epochs else "no epochs"
-            print(f"  {ablation_name}: {len(run_infos)} runs, {epoch_str}")
+    jobs_to_cancel: List[Tuple[str, str, str, str]] = []  # (config, ablation, slurm_job_id, run_name)
+    
+    for (config_name, ablation_name), run_infos in sorted(groups.items()):
+        done_count = sum(1 for r in run_infos if r["final_tag"] == args.tag_done)
+        running_count = sum(1 for r in run_infos if r["final_tag"] == args.tag_running)
+        requeued_count = sum(1 for r in run_infos if r["final_tag"] == args.tag_requeued)
+        maybe_delete_count = sum(1 for r in run_infos if r["final_tag"] == args.tag_maybe_delete)
+        
+        epochs = [r["epoch"] for r in run_infos if r["epoch"] is not None]
+        epoch_str = f"epochs: {min(epochs)}-{max(epochs)}" if epochs else "no epochs"
+        
+        # Check if we have enough done runs
+        excess = done_count - args.target_seeds
+        
+        print(f"\n{config_name} / {ablation_name}:")
+        print(f"  {len(run_infos)} runs, {epoch_str}")
+        print(f"  Done: {done_count}, Running: {running_count}, Requeued: {requeued_count}, Maybe Delete: {maybe_delete_count}")
+        print(f"  Target seeds: {args.target_seeds}, Done count: {done_count}, Excess: {excess}")
+        
+        # If we already have enough done runs, cancel requeued and running runs
+        if done_count >= args.target_seeds and (requeued_count > 0 or running_count > 0):
+            print(f"  [CANCEL] Category has {done_count} done runs (target: {args.target_seeds}), will cancel {requeued_count} requeued + {running_count} running runs")
+            for r in run_infos:
+                if r["final_tag"] in (args.tag_requeued, args.tag_running) and r["slurm_job_id"] is not None:
+                    jobs_to_cancel.append((config_name, ablation_name, r["slurm_job_id"], r["run"].name))
+    
+    # Cancel SLURM jobs for requeued/running runs in completed categories
+    if jobs_to_cancel:
+        print("\n" + "=" * 80)
+        print("CANCELLING REQUEUED/RUNNING SLURM JOBS FOR COMPLETED CATEGORIES")
+        print("=" * 80)
+        print(f"\nFound {len(jobs_to_cancel)} SLURM jobs to cancel")
+        
+        cancelled = 0
+        failed = 0
+        
+        for config_name, ablation_name, slurm_job_id, run_name in jobs_to_cancel:
+            print(f"\n  Cancelling job {slurm_job_id} ({config_name} / {ablation_name})")
+            print(f"    Run name: {run_name}")
+            
+            if args.dry_run:
+                print(f"    [DRY-RUN] Would run: scancel {slurm_job_id}")
+                cancelled += 1
+            else:
+                try:
+                    result = subprocess.run(
+                        ["scancel", slurm_job_id],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode == 0:
+                        print(f"    Successfully cancelled")
+                        cancelled += 1
+                    else:
+                        print(f"    [WARNING] scancel returned error: {result.stderr}")
+                        failed += 1
+                except FileNotFoundError:
+                    print(f"    [ERROR] scancel command not found")
+                    failed += 1
+                except Exception as e:
+                    print(f"    [ERROR] Failed to cancel: {e}")
+                    failed += 1
+        
+        verb = "would cancel" if args.dry_run else "cancelled"
+        print(f"\nCancellation summary: {cancelled} {verb}, {failed} failed")
+    else:
+        print("\n" + "=" * 80)
+        print("NO JOBS TO CANCEL")
+        print("=" * 80)
+        print("\nAll requeued/running runs are for categories that still need more seeds.")
 
 
 if __name__ == "__main__":

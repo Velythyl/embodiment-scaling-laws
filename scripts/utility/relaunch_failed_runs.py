@@ -61,7 +61,8 @@ def get_current_slurm_job_count() -> int:
 
 
 def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: str,
-               wait_for_submission: int = 60, check_interval: int = 2, dry_run: bool = False) -> bool:
+               scripts_dir: str, wait_for_submission: int = 60, check_interval: int = 2, 
+               dry_run: bool = False) -> bool:
     """
     Launch a Hydra multirun job and wait for SLURM submission.
     
@@ -95,6 +96,7 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
     print(f"Launching: {config_name} with ablations [{ablations_str}]")
     print(f"Seeds: {seeds_str}")
     print(f"{'=' * 80}")
+    print(f"Working directory: {scripts_dir}")
     print(f"Command: {' '.join(cmd)}")
     
     if dry_run:
@@ -107,7 +109,7 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
     # Launch the process
     process = subprocess.Popen(
         cmd,
-        cwd="/home/mila/c/charlie.gauthier/embodiment-scaling-laws/scripts",
+        cwd=scripts_dir,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -187,6 +189,12 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    # Compute scripts directory from this script's location
+    # This script is at <repo>/scripts/utility/relaunch_failed_runs.py
+    # We need <repo>/scripts/
+    scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    print(f"Scripts directory: {scripts_dir}")
     
     print(f"Connecting to wandb: {args.entity}/{args.project}")
     
@@ -302,6 +310,7 @@ def main():
                 ablations_str=ablations_str,
                 seeds_str=seeds_str,
                 project=args.project,
+                scripts_dir=scripts_dir,
                 dry_run=args.dry_run,
             )
             

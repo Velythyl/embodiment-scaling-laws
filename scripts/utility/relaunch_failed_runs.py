@@ -17,21 +17,74 @@ import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
+import yaml
 import wandb
 
 
+class ConfigExtractionError(Exception):
+    """Raised when essential config fields cannot be extracted from a run."""
+    pass
+
+
 def get_config_name(run) -> str:
-    """Extract config name from run."""
+    """Extract config name from run.
+    
+    Raises:
+        ConfigExtractionError: If config_name cannot be found in any expected location.
+    """
     config = run.config
+    
+    # Try nested format first: config["meta"]["config_name"]
     meta = config.get("meta", {})
-    return meta.get("config_name", meta.get("run_name", "unknown"))
+    if isinstance(meta, dict):
+        if "config_name" in meta:
+            return meta["config_name"]
+        if "run_name" in meta:
+            return meta["run_name"]
+    
+    # Try flattened formats: "meta/config_name" or "meta.config_name"
+    for key in ["meta/config_name", "meta.config_name", "meta/run_name", "meta.run_name"]:
+        if key in config:
+            return config[key]
+    
+    # Debug: print available keys to help diagnose
+    print(f"[ERROR] Could not find config_name for run {run.id} ({run.name})")
+    print(f"  Available config keys: {list(config.keys())[:20]}...")
+    print(f"  meta value: {meta!r}")
+    
+    raise ConfigExtractionError(
+        f"Cannot extract config_name from run {run.id}. "
+        f"Available keys: {list(config.keys())}"
+    )
 
 
 def get_ablation_name(run) -> str:
-    """Extract ablation name from run."""
+    """Extract ablation name from run.
+    
+    Raises:
+        ConfigExtractionError: If ablation name cannot be found in any expected location.
+    """
     config = run.config
+    
+    # Try nested format first: config["ablation"]["name"]
     ablation = config.get("ablation", {})
-    return ablation.get("name", "unknown")
+    if isinstance(ablation, dict) and "name" in ablation:
+        return ablation["name"]
+    
+    # Try flattened formats: "ablation/name" or "ablation.name"
+    for key in ["ablation/name", "ablation.name"]:
+        if key in config:
+            return config[key]
+    
+    # Debug: print available keys to help diagnose
+    print(f"[ERROR] Could not find ablation name for run {run.id} ({run.name})")
+    print(f"  Available config keys: {list(config.keys())[:20]}...")
+    print(f"  ablation value: {ablation!r}")
+    
+    raise ConfigExtractionError(
+        f"Cannot extract ablation name from run {run.id}. "
+        f"Available keys: {list(config.keys())}"
+    )
 
 
 def get_epoch_count(run) -> Optional[int]:
@@ -243,19 +296,36 @@ def main():
         print(f"Auto-discovered {len(expected_configs)} config names from {conf_dir}")
     
     # Discover or use provided ablation names
+    # NOTE: We need to map from the "name" field in YAML (stored in wandb) to the filename (used for launching)
+    ablation_name_to_filename: Dict[str, str] = {}  # Maps name field -> filename (without .yaml)
+    
     if args.ablation_names:
         expected_ablations: Set[str] = set(args.ablation_names)
         print(f"Using provided ablation names: {sorted(expected_ablations)}")
+        # When provided manually, assume name == filename
+        for name in expected_ablations:
+            ablation_name_to_filename[name] = name
     else:
         # Auto-discover from conf/ablation/ directory
+        # Read the "name" field from each YAML since that's what's stored in wandb
         ablation_dir = os.path.join(conf_dir, "ablation")
         ablation_files = glob.glob(os.path.join(ablation_dir, "*.yaml"))
         expected_ablations = set()
         for f in ablation_files:
             basename = os.path.basename(f)
-            ablation_name = basename.replace(".yaml", "")
+            filename = basename.replace(".yaml", "")
+            # Read the YAML to get the actual "name" field
+            with open(f, 'r') as yaml_file:
+                try:
+                    ablation_config = yaml.safe_load(yaml_file)
+                    ablation_name = ablation_config.get("name", filename)  # Fallback to filename if no name field
+                except Exception as e:
+                    print(f"[WARNING] Could not parse {f}: {e}, using filename as name")
+                    ablation_name = filename
             expected_ablations.add(ablation_name)
+            ablation_name_to_filename[ablation_name] = filename
         print(f"Auto-discovered {len(expected_ablations)} ablation names from {ablation_dir}")
+        print(f"  Name -> Filename mapping: {ablation_name_to_filename}")
     
     # Build the set of all expected (config_name, ablation_name) pairs
     expected_pairs: Set[Tuple[str, str]] = set()
@@ -280,6 +350,18 @@ def main():
     
     print(f"Found {len(runs_list)} total runs")
     
+    # NOTE: api.runs() returns runs with incomplete config data.
+    # We need to fetch each run individually to get the full config.
+    print("Fetching full run configs...")
+    full_runs = []
+    for i, run in enumerate(runs_list):
+        if (i + 1) % 10 == 0:
+            print(f"  Fetched {i + 1}/{len(runs_list)} runs...")
+        # Fetch the full run to get complete config
+        full_run = api.run(f"{args.entity}/{args.project}/{run.id}")
+        full_runs.append(full_run)
+    print(f"  Fetched all {len(full_runs)} runs")
+    
     # Categorize runs by (config_name, ablation_name) and their status
     # Status: done, running, requeued, maybe_delete
     run_status: Dict[Tuple[str, str], Dict[str, List]] = defaultdict(lambda: {
@@ -294,9 +376,16 @@ def main():
     for pair in expected_pairs:
         _ = run_status[pair]  # Access to initialize with default
     
-    for run in runs_list:
-        config_name = get_config_name(run)
-        ablation_name = get_ablation_name(run)
+    skipped_runs = []
+    for run in full_runs:
+        try:
+            config_name = get_config_name(run)
+            ablation_name = get_ablation_name(run)
+        except ConfigExtractionError as e:
+            print(f"[WARNING] Skipping run {run.id} ({run.name}): {e}")
+            skipped_runs.append(run)
+            continue
+            
         tags = run.tags or []
         
         key = (config_name, ablation_name)
@@ -311,6 +400,9 @@ def main():
             run_status[key]["maybe_delete"].append(run)
         else:
             run_status[key]["other"].append(run)
+    
+    if skipped_runs:
+        print(f"\n[WARNING] Skipped {len(skipped_runs)} runs due to missing config fields")
     
     print("\n" + "=" * 100)
     print("RUN STATUS BY (CONFIG, ABLATION)")
@@ -374,7 +466,12 @@ def main():
             seeds_to_ablations[count].append(ablation_name)
         
         for seed_count, ablation_list in seeds_to_ablations.items():
-            ablations_str = ",".join(ablation_list)
+            # Convert ablation names (from wandb) to filenames (for Hydra)
+            ablation_filenames = []
+            for name in ablation_list:
+                filename = ablation_name_to_filename.get(name, name)  # Fallback to name if not found
+                ablation_filenames.append(filename)
+            ablations_str = ",".join(ablation_filenames)
             seeds_str = ",".join(["-1"] * seed_count)
             
             success = launch_job(

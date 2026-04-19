@@ -5,9 +5,10 @@ cpus_per_task: 6
 mem_gb: 32
 tasks_per_node: 1
 stderr_to_stdout: False
-gres: gpu:l40s:1 #gpu:32gb:1 # gpu:rtx8000:1 # No MIG: gpu:32gb:1
+gpus_per_task: l40s:1
+#gres: gpu:l40s:1 #gpu:32gb:1 # gpu:rtx8000:1 # No MIG: gpu:32gb:1
 submitit_folder: ${hydra.sweep.dir}/submitit/%j
-#timeout_min: 1440 # 2 days: 2880 ; 12h : 720 ; 1 day: 1440
+timeout_min: 179 # 2 days: 2880 ; 12h : 720 ; 1 day: 1440
 nodes: 1
 name: ${hydra.job.name}
 array_parallelism: 10 # max num of tasks to run in parallel (via job array)

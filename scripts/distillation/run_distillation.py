@@ -164,7 +164,7 @@ def _get_hydra_output_dir(cfg=None):
     """
     # For SLURM multirun jobs: use env vars directly (survives requeue + HYDRA_SPOOF)
     sweep_dir = os.environ.get("HYDRA_SWEEP_DIR")
-    task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    task_id = os.environ.get("SLURM_ARRAY_TASK_ID", os.environ.get("SLURM_PROCID"))
     if sweep_dir and task_id:
         log_dir = os.path.join(sweep_dir, task_id)
         print(f"[INFO] Using HYDRA_SWEEP_DIR + SLURM_ARRAY_TASK_ID: {log_dir}")
@@ -317,13 +317,14 @@ def _requeue_current_slurm_job():
 
 
 def _exclude_current_node_and_requeue():
-    """Exclude the current node from the job's node list and requeue.
+    """Requeue the job and exclude the current node from its node list.
     
-    This is used when a node has broken CUDA drivers. We add the current node
-    to the job's exclude list so SLURM won't schedule us there again, then requeue.
+    This is used when a node has broken CUDA drivers. We requeue first (putting
+    the job back to pending state), then add the current node to the exclude list
+    so SLURM won't schedule us there again.
     
     Returns:
-        bool: True if both exclude and requeue succeeded, False otherwise.
+        bool: True if both requeue and exclude succeeded, False otherwise.
     """
     job_id = _get_slurm_job_id()
     if not job_id:
@@ -365,22 +366,29 @@ def _exclude_current_node_and_requeue():
     else:
         new_exclude = node_name
     
+    print(f"[INFO] Will exclude node {node_name} from job {job_id}")
+    sys.stdout.flush()
+    
+    # First requeue the job (puts it back to pending state)
+    if not _requeue_current_slurm_job():
+        print(f"[ERROR] Failed to requeue job, cannot update ExcNodeList")
+        return False
+    
+    # Now update the exclude list on the pending job
     print(f"[INFO] Updating job {job_id} ExcNodeList to: {new_exclude}")
     sys.stdout.flush()
     
-    # Update the job's exclude list
     result = subprocess.run(
         ["scontrol", "update", f"JobId={job_id}", f"ExcNodeList={new_exclude}"],
         capture_output=True, text=True
     )
     if result.returncode != 0:
         print(f"[ERROR] Failed to update ExcNodeList: {result.stderr.strip()}")
-        # Try to requeue anyway - maybe it will land on a different node
-    else:
-        print(f"[INFO] Successfully excluded node {node_name} from job {job_id}")
+        # Job is already requeued, it may land on the same bad node again
+        return False
     
-    # Now requeue the job
-    return _requeue_current_slurm_job()
+    print(f"[INFO] Successfully excluded node {node_name} from job {job_id}")
+    return True
 
 
 def _check_cuda_and_requeue_if_broken():

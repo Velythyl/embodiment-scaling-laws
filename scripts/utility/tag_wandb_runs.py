@@ -273,7 +273,17 @@ def main():
             runs = api.runs(f"{args.entity}/{project}", filters=filters)
             project_runs = list(runs)
             print(f"    Found {len(project_runs)} runs")
-            runs_list.extend(project_runs)
+            
+            # NOTE: api.runs() returns runs with incomplete config data.
+            # We need to fetch each run individually to get the full config.
+            print(f"    Fetching full run configs...")
+            for i, run in enumerate(project_runs):
+                if (i + 1) % 10 == 0:
+                    print(f"      Fetched {i + 1}/{len(project_runs)} runs...")
+                # Fetch the full run to get complete config
+                full_run = api.run(f"{args.entity}/{project}/{run.id}")
+                runs_list.append(full_run)
+            print(f"      Fetched all {len(project_runs)} runs from {project}")
         except ValueError as e:
             if "Could not find project" in str(e):
                 print(f"\n[ERROR] Could not find project '{project}' under entity '{args.entity}'")

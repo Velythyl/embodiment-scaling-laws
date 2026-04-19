@@ -20,7 +20,7 @@ from typing import Dict, Set, Optional
 import wandb
 
 
-def get_running_slurm_jobs() -> Set[str]:
+def get_running_slurm_jobs(debug: bool = False) -> Set[str]:
     """
     Get set of currently running SLURM jobs in format "JOB_ID_TASK_ID".
     
@@ -41,6 +41,9 @@ def get_running_slurm_jobs() -> Set[str]:
             capture_output=True,
             text=True,
         )
+        
+        if debug:
+            print(f"[DEBUG] squeue raw output:\n{result.stdout}")
         
         if result.returncode == 0:
             for line in result.stdout.strip().split("\n"):
@@ -75,10 +78,13 @@ def get_running_slurm_jobs() -> Set[str]:
     except Exception as e:
         print(f"[ERROR] Failed to run squeue: {e}")
     
+    if debug:
+        print(f"[DEBUG] Parsed SLURM jobs: {sorted(running_jobs)[:20]}{'...' if len(running_jobs) > 20 else ''}")
+    
     return running_jobs
 
 
-def get_slurm_job_id(run: wandb.apis.public.Run) -> Optional[str]:
+def get_slurm_job_id(run: wandb.apis.public.Run, debug: bool = False) -> Optional[str]:
     """
     Extract SLURM job ID in format "ARRAY_JOB_ID_TASK_ID" from run config.
     
@@ -91,6 +97,9 @@ def get_slurm_job_id(run: wandb.apis.public.Run) -> Optional[str]:
     array_job_id = meta.get("SLURM_ARRAY_JOB_ID")
     array_task_id = meta.get("SLURM_ARRAY_TASK_ID")
     
+    if debug:
+        print(f"[DEBUG] Run {run.id}: SLURM_ARRAY_JOB_ID={array_job_id!r} (type={type(array_job_id).__name__}), SLURM_ARRAY_TASK_ID={array_task_id!r} (type={type(array_task_id).__name__})")
+    
     if array_job_id is None or array_task_id is None:
         # Try regular job ID if array not available
         job_id = meta.get("SLURM_JOB_ID")
@@ -98,7 +107,8 @@ def get_slurm_job_id(run: wandb.apis.public.Run) -> Optional[str]:
             return str(job_id)
         return None
     
-    return f"{array_job_id}_{array_task_id}"
+    # Ensure both are converted to string and formatted consistently
+    return f"{int(array_job_id)}_{int(array_task_id)}"
 
 
 def add_tag_to_run(run: wandb.apis.public.Run, tag: str, dry_run: bool = False) -> bool:
@@ -210,6 +220,11 @@ def main():
         default=None,
         help="Additional wandb filters as JSON string (e.g., '{\"state\": \"running\"}')",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print debug information about SLURM job ID matching",
+    )
     
     args = parser.parse_args()
     
@@ -226,14 +241,35 @@ def main():
     
     # Fetch all runs
     print("Fetching runs...")
-    runs = api.runs(f"{args.entity}/{args.project}", filters=filters)
-    runs_list = list(runs)
+    try:
+        runs = api.runs(f"{args.entity}/{args.project}", filters=filters)
+        runs_list = list(runs)
+    except ValueError as e:
+        if "Could not find project" in str(e):
+            print(f"\n[ERROR] Could not find project '{args.project}' under entity '{args.entity}'")
+            print("\nThis could be due to:")
+            print("  1. The project name is incorrect")
+            print("  2. The entity (username/team) is incorrect")
+            print("  3. You don't have access to this project")
+            print("  4. You need to login: run 'wandb login'")
+            print("\nTrying to list available projects for this entity...")
+            try:
+                entity = api.entity(args.entity)
+                projects = entity.projects()
+                print(f"\nAvailable projects for '{args.entity}':")
+                for proj in projects:
+                    print(f"  - {proj.name}")
+            except Exception as e2:
+                print(f"  Could not list projects: {e2}")
+            return
+        raise
+    
     print(f"Found {len(runs_list)} runs")
     
     # Get currently running SLURM jobs
     print("\nChecking SLURM job status...")
-    running_slurm_jobs = get_running_slurm_jobs()
-    print(f"Found {len(running_slurm_jobs)} running SLURM jobs")
+    running_slurm_jobs = get_running_slurm_jobs(debug=args.debug)
+    print(f"Found {len(running_slurm_jobs)} running/pending SLURM jobs")
     
     # Group runs by config name and ablation name
     groups: Dict[str, Dict[str, list]] = defaultdict(lambda: defaultdict(list))
@@ -256,7 +292,7 @@ def main():
         config_name = get_config_name(run)
         ablation_name = get_ablation_name(run)
         epoch = get_epoch_count(run)
-        slurm_job_id = get_slurm_job_id(run)
+        slurm_job_id = get_slurm_job_id(run, debug=args.debug)
         
         groups[config_name][ablation_name].append({
             "run": run,

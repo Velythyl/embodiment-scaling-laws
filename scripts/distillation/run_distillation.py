@@ -255,20 +255,47 @@ def _check_stop_reason(walltime_deadline):
     return None
 
 
-def _requeue_current_slurm_job():
-    job_id = os.environ.get("SLURM_JOB_ID")
+def _get_slurm_job_id():
+    """Get the current SLURM job ID, handling array jobs correctly.
+    
+    For array jobs, returns the task-specific ID (e.g., "12345_2") rather than
+    just the array job ID, so that requeue/update operations only affect this task.
+    
+    Returns:
+        str or None: The job ID string, or None if not running under SLURM.
+    """
     array_job_id = os.environ.get("SLURM_ARRAY_JOB_ID")
     array_task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    slurm_job_id = os.environ.get("SLURM_JOB_ID")
     
+    if array_job_id and array_task_id:
+        # For array jobs, construct the task-specific job ID (e.g., "12345_2")
+        # SLURM_JOB_ID may just be the array job ID without task suffix on some clusters
+        return f"{array_job_id}_{array_task_id}"
+    elif slurm_job_id:
+        return slurm_job_id
+    else:
+        return None
+
+
+def _requeue_current_slurm_job():
+    """Requeue the current SLURM job.
+    
+    Returns:
+        bool: True if requeue succeeded, False otherwise.
+    """
+    job_id = _get_slurm_job_id()
     if not job_id:
         print("[WARN] Not running under SLURM; skipping requeue")
         return False
-
-    # Log array job information for debugging
+    
+    # Log job info for debugging
+    array_job_id = os.environ.get("SLURM_ARRAY_JOB_ID")
+    array_task_id = os.environ.get("SLURM_ARRAY_TASK_ID")
     if array_job_id and array_task_id:
         print(f"[INFO] Array job detected: SLURM_ARRAY_JOB_ID={array_job_id}, "
-              f"SLURM_ARRAY_TASK_ID={array_task_id}, SLURM_JOB_ID={job_id}")
-        print(f"[INFO] Will requeue using SLURM_JOB_ID={job_id}")
+              f"SLURM_ARRAY_TASK_ID={array_task_id}")
+        print(f"[INFO] Will requeue using task-specific ID: {job_id}")
     else:
         print(f"[INFO] Non-array job, SLURM_JOB_ID={job_id}")
 
@@ -298,7 +325,7 @@ def _exclude_current_node_and_requeue():
     Returns:
         bool: True if both exclude and requeue succeeded, False otherwise.
     """
-    job_id = os.environ.get("SLURM_JOB_ID")
+    job_id = _get_slurm_job_id()
     if not job_id:
         print("[WARN] Not running under SLURM; cannot exclude node")
         return False
@@ -369,7 +396,7 @@ def _check_cuda_and_requeue_if_broken():
     if torch.cuda.is_available():
         return  # All good
     
-    job_id = os.environ.get("SLURM_JOB_ID")
+    job_id = _get_slurm_job_id()
     if not job_id:
         # Not in SLURM - just continue, the code will use CPU or fail later
         print("[WARN] CUDA not available and not running under SLURM")
@@ -440,7 +467,7 @@ def _get_slurm_deadline(buffer_minutes=10):
     Returns:
         float or None: time.monotonic() value when we should stop, or None if not in SLURM.
     """
-    job_id = os.environ.get("SLURM_JOB_ID")
+    job_id = _get_slurm_job_id()
     if not job_id:
         print("[INFO] Not running under SLURM; walltime budget disabled")
         return None

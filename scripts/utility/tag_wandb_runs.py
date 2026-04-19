@@ -27,17 +27,13 @@ def get_running_slurm_jobs(debug: bool = False) -> Set[str]:
     Returns:
         Set of strings like "1234567_0", "1234567_1", etc.
     """
-    import os
     running_jobs = set()
     
     try:
-        # Get current username
-        username = os.environ.get("USER", os.getlogin())
-        
         # Get all running/pending jobs for current user
-        # %A = job array master job ID, %a = array task ID (or N/A if not array)
+        # Use squeue --me to get jobs, then extract JOBID column
         result = subprocess.run(
-            ["squeue", "-u", username, "-h", "-o", "%A_%a"],
+            ["squeue", "--me", "-h", "-o", "%i"],  # %i = job id (includes array task id)
             capture_output=True,
             text=True,
         )
@@ -47,29 +43,9 @@ def get_running_slurm_jobs(debug: bool = False) -> Set[str]:
         
         if result.returncode == 0:
             for line in result.stdout.strip().split("\n"):
-                line = line.strip()
-                if line:
-                    # Handle non-array jobs (they'll have "_N/A" suffix)
-                    # Also handle pending array jobs that might show "1234567_[0-10]"
-                    if "_N/A" in line:
-                        # Non-array job: extract just the job ID
-                        job_id = line.replace("_N/A", "")
-                        running_jobs.add(job_id)
-                    elif "_[" in line:
-                        # Pending array range, e.g., "1234567_[0-10]"
-                        # We'll expand the range
-                        base_id, range_part = line.split("_[")
-                        range_part = range_part.rstrip("]")
-                        # Handle ranges like "0-10" or "0-10,15"
-                        for part in range_part.split(","):
-                            if "-" in part:
-                                start, end = map(int, part.split("-"))
-                                for i in range(start, end + 1):
-                                    running_jobs.add(f"{base_id}_{i}")
-                            else:
-                                running_jobs.add(f"{base_id}_{part}")
-                    else:
-                        running_jobs.add(line)
+                job_id = line.strip()
+                if job_id:
+                    running_jobs.add(job_id)
         else:
             print(f"[WARNING] squeue returned error: {result.stderr}")
             
@@ -79,7 +55,7 @@ def get_running_slurm_jobs(debug: bool = False) -> Set[str]:
         print(f"[ERROR] Failed to run squeue: {e}")
     
     if debug:
-        print(f"[DEBUG] Parsed SLURM jobs: {sorted(running_jobs)[:20]}{'...' if len(running_jobs) > 20 else ''}")
+        print(f"[DEBUG] Parsed SLURM jobs ({len(running_jobs)} total): {sorted(running_jobs)[:20]}{'...' if len(running_jobs) > 20 else ''}")
     
     return running_jobs
 

@@ -77,7 +77,7 @@ def launch_job(config_name: str, ablations_str: str, seeds_str: str, project: st
         "+hydra/sweep=sbatch",
         "hydra.launcher._target_=hydra_plugins.packed_launcher.packedlauncher.SlurmLauncher",
         "hydra.launcher.tasks_per_node=1",
-        f"+hydra.launcher.timeout_min={timeout_min}",
+        f"hydra.launcher.timeout_min={timeout_min}",
         "hydra.launcher.cpus_per_task=6",
         "hydra.launcher.mem_gb=128",
         "hydra.launcher.array_parallelism=300",

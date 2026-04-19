@@ -10,11 +10,12 @@ This script:
 """
 
 import argparse
+import glob
 import os
 import subprocess
 import time
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import wandb
 
@@ -193,6 +194,20 @@ def main():
         default=719,
         help="SLURM job timeout in minutes (default: 719)",
     )
+    parser.add_argument(
+        "--config-names",
+        type=str,
+        nargs="+",
+        default=None,
+        help="List of config names to check. If not provided, auto-discovers from conf/ directory.",
+    )
+    parser.add_argument(
+        "--ablation-names",
+        type=str,
+        nargs="+",
+        default=None,
+        help="List of ablation names to check. If not provided, auto-discovers from conf/ablation/ directory.",
+    )
     
     args = parser.parse_args()
     
@@ -202,7 +217,47 @@ def main():
     scripts_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     print(f"Scripts directory: {scripts_dir}")
     
-    print(f"Connecting to wandb: {args.entity}/{args.project}")
+    # Discover or use provided config names
+    conf_dir = os.path.join(scripts_dir, "distillation", "conf")
+    if args.config_names:
+        expected_configs: Set[str] = set(args.config_names)
+        print(f"Using provided config names: {sorted(expected_configs)}")
+    else:
+        # Auto-discover from conf/ directory (yaml files, excluding config.yaml and test_requeue.yaml)
+        config_files = glob.glob(os.path.join(conf_dir, "*.yaml"))
+        expected_configs = set()
+        for f in config_files:
+            basename = os.path.basename(f)
+            if basename in ("config.yaml", "test_requeue.yaml"):
+                continue
+            # Config name is the filename without .yaml extension
+            config_name = basename.replace(".yaml", "")
+            expected_configs.add(config_name)
+        print(f"Auto-discovered {len(expected_configs)} config names from {conf_dir}")
+    
+    # Discover or use provided ablation names
+    if args.ablation_names:
+        expected_ablations: Set[str] = set(args.ablation_names)
+        print(f"Using provided ablation names: {sorted(expected_ablations)}")
+    else:
+        # Auto-discover from conf/ablation/ directory
+        ablation_dir = os.path.join(conf_dir, "ablation")
+        ablation_files = glob.glob(os.path.join(ablation_dir, "*.yaml"))
+        expected_ablations = set()
+        for f in ablation_files:
+            basename = os.path.basename(f)
+            ablation_name = basename.replace(".yaml", "")
+            expected_ablations.add(ablation_name)
+        print(f"Auto-discovered {len(expected_ablations)} ablation names from {ablation_dir}")
+    
+    # Build the set of all expected (config_name, ablation_name) pairs
+    expected_pairs: Set[Tuple[str, str]] = set()
+    for config_name in expected_configs:
+        for ablation_name in expected_ablations:
+            expected_pairs.add((config_name, ablation_name))
+    print(f"Total expected (config, ablation) pairs: {len(expected_pairs)}")
+    
+    print(f"\nConnecting to wandb: {args.entity}/{args.project}")
     
     # Initialize wandb API
     api = wandb.Api()
@@ -227,6 +282,10 @@ def main():
         "maybe_delete": [],
         "other": [],
     })
+    
+    # Pre-populate run_status with all expected pairs to catch pairs with zero runs
+    for pair in expected_pairs:
+        _ = run_status[pair]  # Access to initialize with default
     
     for run in runs_list:
         config_name = get_config_name(run)
